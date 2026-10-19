@@ -31,9 +31,16 @@ Hiệu năng (NFR-01): sinh 38 test case cho hàm 4 tham số trong ~0.003 giây
 
 ## Cài đặt & chạy giao diện
 
-Giao diện là **ứng dụng desktop bằng CustomTkinter** (không dùng Streamlit,
-không mở trình duyệt). Toàn bộ nhãn/biểu tượng trên UI là text thuần —
-không dùng icon emoji; khi cần icon, nạp file SVG/PNG qua `CTkImage`.
+Giao diện là **ứng dụng desktop bằng CustomTkinter** theo phong cách app
+desktop hiện đại: thanh header, sidebar chia mục, thanh trạng thái, hỗ trợ
+**Sáng/Tối** (nút ở góc phải header). Nút bấm dùng **icon + chữ ngắn**;
+icon là bộ Feather Icons (MIT) dạng **SVG** lưu ở `assets/icons/svg/` và
+được render sẵn sang PNG (Tkinter không hiển thị SVG trực tiếp) bằng:
+
+```bash
+pip install cairosvg   # chỉ cần khi render lại icon
+python tools/build_icons.py
+```
 
 ```bash
 git clone https://github.com/thienba33/BTG.git
@@ -75,6 +82,8 @@ pytest -q
 ```
 BTG/
 ├── app.py                  # Lớp giao diện (CustomTkinter desktop UI)
+├── assets/icons/           # Icon Feather: nguồn SVG (svg/) + PNG đã render
+├── tools/build_icons.py    # Render SVG -> PNG cho giao diện
 ├── btg/
 │   ├── models.py           # ParamSpec / FunctionSpec / TestCase
 │   ├── validation.py       # Kiểm tra spec (FR-1.4)

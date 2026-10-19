@@ -1,19 +1,24 @@
-"""BTG — Black-box Test Generator (CustomTkinter desktop UI).
+"""BTG — Black-box Test Generator (CustomTkinter desktop app).
 
 Chay:  python app.py
 
-Giao dien desktop bang CustomTkinter, tach rieng khoi logic (NFR-03):
-UI chi doc form -> FunctionSpec, roi goi btg.generators / btg.executor /
-btg.exporter. Giao dien khong dung icon emoji; chi dung text thuan.
-Neu can icon sau nay, dung file SVG/PNG nap qua CTkImage.
+Phong cach giao dien desktop: thanh header, sidebar chia muc, nut bam
+icon + chu ngan, bang du lieu khop theme. Icon la Feather Icons (MIT)
+dang SVG o assets/icons/svg/, render san sang PNG bang
+tools/build_icons.py vi Tkinter khong hien thi SVG truc tiep.
+
+Lop UI tach rieng khoi logic (NFR-03): UI chi doc form -> FunctionSpec,
+roi goi btg.generators / btg.executor / btg.exporter.
 """
 from __future__ import annotations
 
 import json
+import pathlib
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import customtkinter as ctk
+from PIL import Image
 
 from btg.exporter import export_csv, export_excel, generate_pytest_code
 from btg.executor import apply_oracle, pass_fail_summary, run_test_cases
@@ -22,10 +27,46 @@ from btg.models import FunctionSpec, ParamSpec, ParamType
 from btg.parser import parse_python_code
 from btg.validation import validate_spec
 
-ctk.set_appearance_mode("System")
+ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 TYPE_OPTIONS = [t.value for t in ParamType]
+ICON_DIR = pathlib.Path(__file__).resolve().parent / "assets" / "icons"
+
+GREEN = "#1F7A3D"
+GREEN_HOVER = "#176132"
+
+_icon_cache: dict = {}
+
+
+def icon(name: str, size: int = 20) -> ctk.CTkImage:
+    """Nap icon PNG (2 ban mau cho Light/Dark) thanh CTkImage."""
+    key = (name, size)
+    if key not in _icon_cache:
+        _icon_cache[key] = ctk.CTkImage(
+            light_image=Image.open(ICON_DIR / f"{name}_light.png"),
+            dark_image=Image.open(ICON_DIR / f"{name}_dark.png"),
+            size=(size, size),
+        )
+    return _icon_cache[key]
+
+
+def section_label(master, text: str) -> ctk.CTkLabel:
+    """Nhan tieu de muc kieu sidebar desktop (chu hoa nho, xam)."""
+    return ctk.CTkLabel(
+        master, text=text.upper(),
+        font=ctk.CTkFont(size=11, weight="bold"),
+        text_color=("gray45", "gray65"), anchor="w",
+    )
+
+
+def icon_button(master, icon_name: str, text: str, command,
+                tip: str | None = None, **kwargs) -> ctk.CTkButton:
+    btn = ctk.CTkButton(master, image=icon(icon_name), text=text,
+                        compound="left", anchor="w", command=command, **kwargs)
+    if tip:
+        ToolTip(btn, tip)
+    return btn
 
 
 # ----------------------------------------------------------------- Tooltip
@@ -53,18 +94,11 @@ class ToolTip:
         self._tip = tk.Toplevel(self.widget)
         self._tip.wm_overrideredirect(True)
         self._tip.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(
-            self._tip,
-            text=self.text,
-            justify="left",
-            bg="#2b2b2b",
-            fg="white",
-            padx=8,
-            pady=4,
-            font=("TkDefaultFont", 9),
-            wraplength=320,
-        )
-        label.pack()
+        tk.Label(
+            self._tip, text=self.text, justify="left",
+            bg="#2b2b2b", fg="white", padx=8, pady=4,
+            font=("TkDefaultFont", 9), wraplength=320,
+        ).pack()
 
     def _hide(self, _event=None) -> None:
         if self._after_id is not None:
@@ -75,61 +109,53 @@ class ToolTip:
             self._tip = None
 
 
-def add_tip(widget: tk.Widget, text: str) -> tk.Widget:
-    ToolTip(widget, text)
-    return widget
-
-
 # --------------------------------------------------------------- Param card
 class ParamCard(ctk.CTkFrame):
     """Mot the tham so trong form dong (FR-1.1, FR-1.2)."""
 
     def __init__(self, master, on_delete, data: dict | None = None):
-        super().__init__(master, border_width=1)
+        super().__init__(master, border_width=1, corner_radius=8)
         self.on_delete = on_delete
         data = data or {}
         self.title_var = tk.StringVar(value="Tham số")
         self.name_var = tk.StringVar(value=data.get("name", "param"))
         self.type_var = tk.StringVar(value=data.get("type", "int"))
-        # int / float
         self.min_var = tk.StringVar(value=str(data.get("min_value", 0)))
         self.max_var = tk.StringVar(value=str(data.get("max_value", 100)))
-        # string
         self.minlen_var = tk.StringVar(value=str(data.get("min_length", 1)))
         self.maxlen_var = tk.StringVar(value=str(data.get("max_length", 10)))
         self.regex_var = tk.StringVar(value=data.get("regex", "") or "")
         self.allow_empty_var = tk.BooleanVar(value=bool(data.get("allow_empty", False)))
-        # enum
-        self.enum_var = tk.StringVar(
-            value=data.get("enum_text", "admin, user, guest")
-        )
+        self.enum_var = tk.StringVar(value=data.get("enum_text", "admin, user, guest"))
         self.allow_null_var = tk.BooleanVar(value=bool(data.get("allow_null", False)))
 
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=10, pady=(8, 2))
+        header.pack(fill="x", padx=10, pady=(8, 0))
         ctk.CTkLabel(header, textvariable=self.title_var,
                      font=ctk.CTkFont(weight="bold")).pack(side="left")
-        add_tip(
-            ctk.CTkButton(header, text="Xoá", width=56,
-                          command=lambda: self.on_delete(self)),
-            "Xoá tham số này khỏi hàm",
-        ).pack(side="right")
+        del_btn = ctk.CTkButton(
+            header, image=icon("trash-2", 16), text="", width=32, height=28,
+            fg_color="transparent", hover_color=("#E8C4C4", "#5A2A2A"),
+            command=lambda: self.on_delete(self),
+        )
+        del_btn.pack(side="right")
+        ToolTip(del_btn, "Xoá tham số này khỏi hàm")
 
         row = ctk.CTkFrame(self, fg_color="transparent")
         row.pack(fill="x", padx=10, pady=4)
-        ctk.CTkLabel(row, text="Tên tham số", width=90, anchor="w").pack(side="left")
-        name_entry = ctk.CTkEntry(row, textvariable=self.name_var, width=160)
+        ctk.CTkLabel(row, text="Tên", width=34, anchor="w").pack(side="left")
+        name_entry = ctk.CTkEntry(row, textvariable=self.name_var, width=150)
         name_entry.pack(side="left", padx=(0, 12))
-        add_tip(name_entry, "Tên biến của tham số, phải hợp lệ trong Python "
+        ToolTip(name_entry, "Tên biến của tham số, phải hợp lệ trong Python "
                             "và không trùng với tham số khác (FR-1.4).")
         self.name_var.trace_add("write", lambda *_: self._refresh_title())
-        ctk.CTkLabel(row, text="Kiểu", width=40, anchor="w").pack(side="left")
+        ctk.CTkLabel(row, text="Kiểu", width=36, anchor="w").pack(side="left")
         type_menu = ctk.CTkOptionMenu(
-            row, values=TYPE_OPTIONS, variable=self.type_var, width=110,
+            row, values=TYPE_OPTIONS, variable=self.type_var, width=104,
             command=lambda _v: self._rebuild_config(),
         )
         type_menu.pack(side="left")
-        add_tip(type_menu, "Kiểu dữ liệu của tham số: int, float, string, "
+        ToolTip(type_menu, "Kiểu dữ liệu: int, float, string, "
                            "enum (tập giá trị cố định) hoặc bool.")
 
         self.config_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -138,7 +164,7 @@ class ParamCard(ctk.CTkFrame):
         self._refresh_title()
 
     def _refresh_title(self) -> None:
-        self.title_var.set(f"Tham số: {self.name_var.get()} ({self.type_var.get()})")
+        self.title_var.set(f"{self.name_var.get()} · {self.type_var.get()}")
 
     def _rebuild_config(self) -> None:
         for child in self.config_frame.winfo_children():
@@ -146,55 +172,50 @@ class ParamCard(ctk.CTkFrame):
         ptype = self.type_var.get()
         f = self.config_frame
         if ptype in ("int", "float"):
-            ctk.CTkLabel(f, text="Min", width=90, anchor="w").grid(row=0, column=0, sticky="w")
-            min_entry = ctk.CTkEntry(f, textvariable=self.min_var, width=110)
+            ctk.CTkLabel(f, text="Min", width=34, anchor="w").grid(row=0, column=0, sticky="w")
+            min_entry = ctk.CTkEntry(f, textvariable=self.min_var, width=100)
             min_entry.grid(row=0, column=1, padx=(0, 12))
-            add_tip(min_entry, "Giá trị nhỏ nhất hợp lệ. BVA sẽ sinh các điểm "
+            ToolTip(min_entry, "Giá trị nhỏ nhất hợp lệ. BVA sinh các điểm "
                                "min-1, min, min+1 (FR-2.2).")
-            ctk.CTkLabel(f, text="Max", width=40, anchor="w").grid(row=0, column=2, sticky="w")
-            max_entry = ctk.CTkEntry(f, textvariable=self.max_var, width=110)
+            ctk.CTkLabel(f, text="Max", width=36, anchor="w").grid(row=0, column=2, sticky="w")
+            max_entry = ctk.CTkEntry(f, textvariable=self.max_var, width=100)
             max_entry.grid(row=0, column=3, padx=(0, 12))
-            add_tip(max_entry, "Giá trị lớn nhất hợp lệ, phải >= Min. "
-                               "BVA sẽ sinh max-1, max, max+1 (FR-2.2).")
-            null_box = ctk.CTkCheckBox(f, text="Allow null (None)",
-                                       variable=self.allow_null_var)
+            ToolTip(max_entry, "Giá trị lớn nhất hợp lệ, phải >= Min (FR-2.2).")
+            null_box = ctk.CTkCheckBox(f, text="Allow null", variable=self.allow_null_var)
             null_box.grid(row=0, column=4)
-            add_tip(null_box, "Cho phép giá trị None là hợp lệ; nếu tắt, "
-                              "BTG sẽ sinh case None thuộc vùng không hợp lệ.")
+            ToolTip(null_box, "Cho phép None là hợp lệ; nếu tắt, BTG sinh "
+                              "case None thuộc vùng không hợp lệ.")
         elif ptype == "string":
-            ctk.CTkLabel(f, text="Min length", width=90, anchor="w").grid(row=0, column=0, sticky="w")
-            minlen_entry = ctk.CTkEntry(f, textvariable=self.minlen_var, width=70)
+            ctk.CTkLabel(f, text="Min length", width=70, anchor="w").grid(row=0, column=0, sticky="w")
+            minlen_entry = ctk.CTkEntry(f, textvariable=self.minlen_var, width=64)
             minlen_entry.grid(row=0, column=1, padx=(0, 12))
-            add_tip(minlen_entry, "Độ dài chuỗi tối thiểu hợp lệ.")
-            ctk.CTkLabel(f, text="Max length", width=80, anchor="w").grid(row=0, column=2, sticky="w")
-            maxlen_entry = ctk.CTkEntry(f, textvariable=self.maxlen_var, width=70)
+            ToolTip(minlen_entry, "Độ dài chuỗi tối thiểu hợp lệ.")
+            ctk.CTkLabel(f, text="Max length", width=74, anchor="w").grid(row=0, column=2, sticky="w")
+            maxlen_entry = ctk.CTkEntry(f, textvariable=self.maxlen_var, width=64)
             maxlen_entry.grid(row=0, column=3, padx=(0, 12))
-            add_tip(maxlen_entry, "Độ dài chuỗi tối đa hợp lệ, phải >= Min length.")
-            empty_box = ctk.CTkCheckBox(f, text="Allow empty",
-                                        variable=self.allow_empty_var)
+            ToolTip(maxlen_entry, "Độ dài chuỗi tối đa hợp lệ, phải >= Min length.")
+            empty_box = ctk.CTkCheckBox(f, text="Allow empty", variable=self.allow_empty_var)
             empty_box.grid(row=0, column=4, padx=(0, 8))
-            add_tip(empty_box, "Cho phép chuỗi rỗng '' là hợp lệ.")
-            null_box = ctk.CTkCheckBox(f, text="Allow null",
-                                       variable=self.allow_null_var)
+            ToolTip(empty_box, "Cho phép chuỗi rỗng '' là hợp lệ.")
+            null_box = ctk.CTkCheckBox(f, text="Allow null", variable=self.allow_null_var)
             null_box.grid(row=0, column=5)
-            add_tip(null_box, "Cho phép giá trị None là hợp lệ.")
-            ctk.CTkLabel(f, text="Regex", width=90, anchor="w").grid(row=1, column=0, sticky="w", pady=(6, 0))
-            regex_entry = ctk.CTkEntry(f, textvariable=self.regex_var, width=330)
+            ToolTip(null_box, "Cho phép None là hợp lệ.")
+            ctk.CTkLabel(f, text="Regex", width=70, anchor="w").grid(row=1, column=0, sticky="w", pady=(6, 0))
+            regex_entry = ctk.CTkEntry(f, textvariable=self.regex_var, width=320)
             regex_entry.grid(row=1, column=1, columnspan=5, sticky="w", pady=(6, 0))
-            add_tip(regex_entry, "Tuỳ chọn: mẫu regex mà chuỗi hợp lệ phải khớp, "
-                                 "VD ^\\d{3}$ cho chuỗi 3 chữ số. Regex sai sẽ báo lỗi (FR-1.4).")
+            ToolTip(regex_entry, "Tuỳ chọn: mẫu regex chuỗi hợp lệ phải khớp, "
+                                 "VD ^\\d{3}$ cho chuỗi 3 chữ số (FR-1.4).")
         elif ptype == "enum":
-            ctk.CTkLabel(f, text="Giá trị hợp lệ", width=90, anchor="w").grid(row=0, column=0, sticky="w")
-            enum_entry = ctk.CTkEntry(f, textvariable=self.enum_var, width=330)
+            ctk.CTkLabel(f, text="Giá trị", width=70, anchor="w").grid(row=0, column=0, sticky="w")
+            enum_entry = ctk.CTkEntry(f, textvariable=self.enum_var, width=300)
             enum_entry.grid(row=0, column=1, padx=(0, 12))
-            add_tip(enum_entry, "Danh sách giá trị hợp lệ, cách nhau bởi dấu phẩy. "
-                                "Giá trị ngoài danh sách sẽ thuộc vùng không hợp lệ.")
-            null_box = ctk.CTkCheckBox(f, text="Allow null",
-                                       variable=self.allow_null_var)
+            ToolTip(enum_entry, "Danh sách giá trị hợp lệ, cách nhau bởi dấu phẩy. "
+                                "Giá trị ngoài danh sách thuộc vùng không hợp lệ.")
+            null_box = ctk.CTkCheckBox(f, text="Allow null", variable=self.allow_null_var)
             null_box.grid(row=0, column=2)
-            add_tip(null_box, "Cho phép giá trị None là hợp lệ.")
+            ToolTip(null_box, "Cho phép None là hợp lệ.")
         else:  # bool
-            ctk.CTkLabel(f, text="Bool tự hiểu 2 giá trị True / False.",
+            ctk.CTkLabel(f, text="Bool gồm 2 giá trị True / False.",
                          text_color="gray").grid(row=0, column=0, sticky="w")
         self._refresh_title()
 
@@ -209,9 +230,6 @@ class ParamCard(ctk.CTkFrame):
                 f"đang nhập '{raw}'."
             ) from None
 
-    def _integer(self, var: tk.StringVar, label: str) -> int:
-        return int(self._number(var, label))
-
     def collect(self) -> ParamSpec:
         name = self.name_var.get().strip()
         ptype = ParamType(self.type_var.get())
@@ -222,8 +240,8 @@ class ParamCard(ctk.CTkFrame):
                              allow_null=self.allow_null_var.get())
         if ptype == ParamType.STRING:
             return ParamSpec(name, ptype,
-                             min_length=self._integer(self.minlen_var, "Min length"),
-                             max_length=self._integer(self.maxlen_var, "Max length"),
+                             min_length=int(self._number(self.minlen_var, "Min length")),
+                             max_length=int(self._number(self.maxlen_var, "Max length")),
                              regex=self.regex_var.get().strip() or None,
                              allow_empty=self.allow_empty_var.get(),
                              allow_null=self.allow_null_var.get())
@@ -239,19 +257,21 @@ class BTGApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("BTG — Black-box Test Generator")
-        self.geometry("1340x820")
-        self.minsize(1100, 680)
+        self.geometry("1340x860")
+        self.minsize(1080, 660)
+        self.dark_mode = True
 
         self.param_cards: list[ParamCard] = []
         self.spec: FunctionSpec | None = None
         self.cases: list = []
         self.imported_specs: list[FunctionSpec] = []
 
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        self._build_sidebar()
-        self._build_main()
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self._build_header()
+        self._build_body()
         self._build_statusbar()
+        self._style_trees()
         self.add_param({
             "name": "param1", "type": "int",
             "min_value": 0, "max_value": 100,
@@ -259,153 +279,160 @@ class BTGApp(ctk.CTk):
             "enum_text": "admin, user, guest",
         })
 
-    # ------------------------------------------------------------- layout
-    def _build_sidebar(self) -> None:
-        sb = ctk.CTkFrame(self, width=330)
-        sb.grid(row=0, column=0, sticky="nsew", padx=(10, 5), pady=10)
-        sb.grid_propagate(False)
+    # ------------------------------------------------------------- header
+    def _build_header(self) -> None:
+        header = ctk.CTkFrame(self, height=56, corner_radius=0,
+                              fg_color=("#E7E7E7", "#1B1B1B"))
+        header.grid(row=0, column=0, sticky="ew")
+        header.grid_propagate(False)
+        logo = ctk.CTkLabel(header, image=icon("zap", 24), text="")
+        logo.pack(side="left", padx=(14, 8))
+        ctk.CTkLabel(header, text="BTG",
+                     font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")
+        ctk.CTkLabel(header, text="Black-box Test Generator",
+                     text_color="gray").pack(side="left", padx=(8, 0))
 
-        ctk.CTkLabel(sb, text="BTG — Black-box Test Generator",
-                     font=ctk.CTkFont(size=16, weight="bold"),
-                     wraplength=300, justify="left").pack(anchor="w", padx=14, pady=(14, 2))
-        ctk.CTkLabel(sb, text="Sinh test case bằng EP, BVA, Pairwise cho hàm Python",
-                     text_color="gray", wraplength=300,
-                     justify="left").pack(anchor="w", padx=14, pady=(0, 10))
+        gen_btn = ctk.CTkButton(
+            header, image=icon("zap"), text="Sinh Test Case", compound="left",
+            width=160, height=36, fg_color=GREEN, hover_color=GREEN_HOVER,
+            font=ctk.CTkFont(weight="bold"), command=self._generate)
+        gen_btn.pack(side="right", padx=(8, 14))
+        ToolTip(gen_btn, "Sinh test case theo các kỹ thuật đã chọn. "
+                         "Hàm dưới 5 tham số sinh trong < 2 giây (NFR-01).")
+        self.theme_btn = ctk.CTkButton(
+            header, image=icon("sun"), text="", width=40, height=36,
+            fg_color="transparent", hover_color=("gray82", "gray25"),
+            command=self._toggle_theme)
+        self.theme_btn.pack(side="right")
+        ToolTip(self.theme_btn, "Chuyển giao diện Sáng / Tối")
 
-        ctk.CTkLabel(sb, text="1. Nhập từ file Python (.py)",
-                     font=ctk.CTkFont(weight="bold")).pack(anchor="w", padx=14, pady=(6, 4))
-        add_tip(
-            ctk.CTkButton(sb, text="Chọn file .py...", command=self._load_py_file),
-            "Tự trích xuất tên hàm, tham số và type hint bằng AST (FR-1.3). "
-            "Literal[...] sẽ được hiểu là enum.",
-        ).pack(fill="x", padx=14)
+    def _toggle_theme(self) -> None:
+        self.dark_mode = not self.dark_mode
+        ctk.set_appearance_mode("dark" if self.dark_mode else "light")
+        self.theme_btn.configure(image=icon("sun" if self.dark_mode else "moon"))
+        self._style_trees()
+
+    # --------------------------------------------------------------- body
+    def _build_body(self) -> None:
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew")
+        body.grid_rowconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=1)
+        self._build_sidebar(body)
+        self._build_main(body)
+
+    def _build_sidebar(self, body) -> None:
+        sb = ctk.CTkScrollableFrame(body, width=272, corner_radius=0,
+                                    fg_color=("#F0F0F0", "#212121"),
+                                    scrollbar_button_color=("gray70", "gray35"))
+        sb.grid(row=0, column=0, sticky="nsew")
+
+        section_label(sb, "File Python").pack(anchor="w", padx=14, pady=(14, 6))
+        icon_button(sb, "folder", "Mở file .py", self._load_py_file,
+                    tip="Tự trích xuất tên hàm, tham số và type hint bằng AST "
+                        "(FR-1.3). Literal[...] được hiểu là enum.",
+                    height=34).pack(fill="x", padx=14)
         self.imported_name_var = tk.StringVar(value="")
         self.imported_menu = ctk.CTkOptionMenu(sb, values=["(chưa có hàm)"],
-                                               variable=self.imported_name_var)
+                                               variable=self.imported_name_var,
+                                               height=34)
         self.imported_menu.pack(fill="x", padx=14, pady=(8, 0))
-        add_tip(
-            ctk.CTkButton(sb, text="Điền hàm đã chọn vào Form",
-                          command=self._apply_imported),
-            "Nạp hàm đang chọn ở trên vào form cấu hình bên phải.",
-        ).pack(fill="x", padx=14, pady=(8, 0))
+        icon_button(sb, "download", "Điền vào form", self._apply_imported,
+                    tip="Nạp hàm đang chọn vào form cấu hình bên phải.",
+                    height=34).pack(fill="x", padx=14, pady=(8, 0))
 
-        ctk.CTkLabel(sb, text="2. Kỹ thuật sinh test",
-                     font=ctk.CTkFont(weight="bold")).pack(anchor="w", padx=14, pady=(16, 4))
+        section_label(sb, "Kỹ thuật sinh test").pack(anchor="w", padx=14, pady=(20, 6))
         self.use_ep_var = tk.BooleanVar(value=True)
         self.use_bva_var = tk.BooleanVar(value=True)
         self.use_pairwise_var = tk.BooleanVar(value=False)
         ep_box = ctk.CTkCheckBox(sb, text="Equivalence Partitioning (EP)",
                                  variable=self.use_ep_var)
-        ep_box.pack(anchor="w", padx=14, pady=2)
-        add_tip(ep_box, "Chia miền dữ liệu thành các vùng tương đương, "
+        ep_box.pack(anchor="w", padx=14, pady=3)
+        ToolTip(ep_box, "Chia miền dữ liệu thành các vùng tương đương, "
                         "mỗi vùng lấy 1 giá trị đại diện (FR-2.1).")
         bva_box = ctk.CTkCheckBox(sb, text="Boundary Value Analysis (BVA)",
                                   variable=self.use_bva_var)
-        bva_box.pack(anchor="w", padx=14, pady=2)
-        add_tip(bva_box, "Sinh các điểm sát biên: min-1, min, min+1, "
+        bva_box.pack(anchor="w", padx=14, pady=3)
+        ToolTip(bva_box, "Sinh các điểm sát biên: min-1, min, min+1, "
                          "max-1, max, max+1 (FR-2.2).")
-        pw_box = ctk.CTkCheckBox(sb, text="Pairwise",
-                                 variable=self.use_pairwise_var)
-        pw_box.pack(anchor="w", padx=14, pady=2)
-        add_tip(pw_box, "Bao phủ mọi cặp giá trị giữa các tham số — "
+        pw_box = ctk.CTkCheckBox(sb, text="Pairwise", variable=self.use_pairwise_var)
+        pw_box.pack(anchor="w", padx=14, pady=3)
+        ToolTip(pw_box, "Bao phủ mọi cặp giá trị giữa các tham số — "
                         "khuyên dùng khi hàm có > 3 tham số (FR-2.3).")
 
-        ctk.CTkLabel(sb, text="3. Ground Truth (Oracle)",
-                     font=ctk.CTkFont(weight="bold")).pack(anchor="w", padx=14, pady=(16, 4))
-        ctk.CTkLabel(sb, text="Hàm chuẩn để tự điền Expected Output và "
-                              "chạy Run Tests (FR-3.2).",
-                     text_color="gray", wraplength=300,
-                     justify="left").pack(anchor="w", padx=14)
-        add_tip(
-            ctk.CTkButton(sb, text="Chọn file Ground Truth (.py)...",
-                          command=self._load_gt_file),
-            "Nạp code hàm chuẩn từ một file .py riêng (không nhất thiết "
-            "là file đã import ở mục 1).",
-        ).pack(fill="x", padx=14, pady=(6, 0))
-        self.gt_text = ctk.CTkTextbox(sb, height=170)
-        self.gt_text.pack(fill="x", padx=14, pady=(8, 6))
-        add_tip(self.gt_text, "Code hàm chuẩn (cùng tên với hàm đang cấu hình). "
-                              "Có thể dán trực tiếp vào đây hoặc nạp từ file.")
+        section_label(sb, "Ground Truth (Oracle)").pack(anchor="w", padx=14, pady=(20, 6))
+        icon_button(sb, "database", "Mở file Ground Truth", self._load_gt_file,
+                    tip="Nạp code hàm chuẩn từ một file .py riêng. Hàm chuẩn "
+                        "dùng để tự điền Expected Output và chạy Run Tests (FR-3.2).",
+                    height=34).pack(fill="x", padx=14)
+        self.gt_text = ctk.CTkTextbox(sb, height=150)
+        self.gt_text.pack(fill="x", padx=14, pady=(8, 14))
+        ToolTip(self.gt_text, "Code hàm chuẩn, cùng tên với hàm đang cấu hình. "
+                              "Dán trực tiếp vào đây hoặc nạp từ file.")
 
-    def _build_main(self) -> None:
-        main = ctk.CTkFrame(self, fg_color="transparent")
-        main.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
-        main.grid_rowconfigure(1, weight=1)
-        main.grid_rowconfigure(3, weight=2)
+    def _build_main(self, body) -> None:
+        main = ctk.CTkFrame(body, fg_color="transparent")
+        main.grid(row=0, column=1, sticky="nsew", padx=(12, 12), pady=(10, 6))
+        main.grid_rowconfigure(2, weight=1)
+        main.grid_rowconfigure(4, weight=1)
         main.grid_columnconfigure(0, weight=1)
 
-        # --- Form cấu hình hàm & tham số
-        form_box = ctk.CTkFrame(main, fg_color="transparent")
-        form_box.grid(row=0, column=0, sticky="ew")
-        ctk.CTkLabel(form_box, text="Tên hàm", width=70, anchor="w").pack(side="left")
+        toolbar = ctk.CTkFrame(main, fg_color="transparent")
+        toolbar.grid(row=0, column=0, sticky="ew")
+        ctk.CTkLabel(toolbar, text="Hàm", width=36, anchor="w").pack(side="left")
         self.func_name_var = tk.StringVar(value="my_function")
-        func_entry = ctk.CTkEntry(form_box, textvariable=self.func_name_var, width=240)
+        func_entry = ctk.CTkEntry(toolbar, textvariable=self.func_name_var, width=230)
         func_entry.pack(side="left")
-        add_tip(func_entry, "Tên hàm cần sinh test case — phải trùng tên hàm "
+        ToolTip(func_entry, "Tên hàm cần sinh test case — phải trùng tên hàm "
                             "trong Ground Truth nếu muốn Run Tests.")
-        add_tip(
-            ctk.CTkButton(form_box, text="Thêm tham số", width=120,
-                          command=lambda: self.add_param()),
-            "Thêm một tham số mới vào form (FR-1.1).",
-        ).pack(side="left", padx=(12, 0))
-        add_tip(
-            ctk.CTkButton(form_box, text="Sinh Test Case", width=140,
-                          fg_color="#1f7a3d", hover_color="#176132",
-                          command=self._generate),
-            "Sinh test case theo các kỹ thuật đã chọn ở sidebar. "
-            "Tối đa vài giây với hàm dưới 5 tham số (NFR-01).",
-        ).pack(side="right")
+        icon_button(toolbar, "plus", "Thêm tham số", lambda: self.add_param(),
+                    tip="Thêm một tham số mới vào hàm (FR-1.1).",
+                    width=140, height=32).pack(side="left", padx=(12, 0))
 
-        self.params_frame = ctk.CTkScrollableFrame(
-            main, label_text="Cấu hình hàm & tham số (FR-1.1, FR-1.2)")
-        self.params_frame.grid(row=1, column=0, sticky="nsew", pady=(8, 8))
-
-        # --- Kết quả
-        tabs = ctk.CTkTabview(main)
-        tabs.grid(row=3, column=0, sticky="nsew")
-        cases_tab = tabs.add("Test Cases")
-        run_tab = tabs.add("Kết quả Run Tests")
-
-        cols = ("id", "inputs", "expected", "exception", "technique", "reasoning")
-        self.cases_tree = self._make_tree(
-            cases_tab, cols,
-            ["Testcase ID", "Inputs", "Expected Output",
-             "Expected Exception", "Test Technique", "Reasoning"],
-            [80, 300, 140, 130, 110, 300],
-        )
-        self.cases_tree.bind("<Double-1>", self._on_case_double_click)
-        add_tip(self.cases_tree,
-                "Nhấp đúp vào cột Expected Output hoặc Expected Exception "
-                "để tự cấu hình kết quả mong đợi cho từng case (FR-3.1).")
-
-        run_cols = ("id", "inputs", "expected", "actual", "status")
-        self.run_tree = self._make_tree(
-            run_tab, run_cols,
-            ["ID", "Inputs", "Expected", "Actual", "Status"],
-            [80, 320, 180, 180, 90],
-        )
-        self.run_tree.tag_configure("Pass", foreground="#1f7a3d")
-        self.run_tree.tag_configure("Fail", foreground="#b3261e")
+        section_label(main, "Tham số").grid(row=1, column=0, sticky="w", pady=(10, 4))
+        self.params_frame = ctk.CTkScrollableFrame(main, fg_color="transparent")
+        self.params_frame.grid(row=2, column=0, sticky="nsew")
 
         actions = ctk.CTkFrame(main, fg_color="transparent")
-        actions.grid(row=2, column=0, sticky="ew", pady=(0, 2))
-        add_tip(ctk.CTkButton(actions, text="Xuất CSV", width=110,
-                              command=self._export_csv),
-                "Xuất bảng test case ra file CSV (FR-4.1).").pack(side="left", padx=(0, 8))
-        add_tip(ctk.CTkButton(actions, text="Xuất Excel", width=110,
-                              command=self._export_excel),
-                "Xuất bảng test case ra file Excel .xlsx (FR-4.1).").pack(side="left", padx=(0, 8))
-        add_tip(ctk.CTkButton(actions, text="Xuất test_generated.py", width=180,
-                              command=self._export_pytest),
-                "Sinh file pytest dùng @pytest.mark.parametrize, "
-                "chạy được ngay (FR-4.2).").pack(side="left", padx=(0, 8))
-        add_tip(ctk.CTkButton(actions, text="Run Tests", width=120,
-                              command=self._run_tests),
-                "Chạy toàn bộ test case với Ground Truth và hiển thị "
-                "tỉ lệ Pass/Fail (FR-4.3).").pack(side="left")
+        actions.grid(row=3, column=0, sticky="ew", pady=(10, 6))
+        icon_button(actions, "file-text", "CSV", self._export_csv,
+                    tip="Xuất bảng test case ra file CSV (FR-4.1).",
+                    width=96, height=32).pack(side="left", padx=(0, 8))
+        icon_button(actions, "grid", "Excel", self._export_excel,
+                    tip="Xuất bảng test case ra file Excel .xlsx (FR-4.1).",
+                    width=96, height=32).pack(side="left", padx=(0, 8))
+        icon_button(actions, "code", "Pytest", self._export_pytest,
+                    tip="Sinh file test_generated.py dùng @pytest.mark.parametrize (FR-4.2).",
+                    width=104, height=32).pack(side="left", padx=(0, 8))
+        icon_button(actions, "play", "Run Tests", self._run_tests,
+                    tip="Chạy toàn bộ test case với Ground Truth, "
+                        "hiển thị tỉ lệ Pass/Fail (FR-4.3).",
+                    width=118, height=32).pack(side="left")
         self.summary_var = tk.StringVar(value="")
         ctk.CTkLabel(actions, textvariable=self.summary_var,
                      font=ctk.CTkFont(weight="bold")).pack(side="right")
+
+        tabs = ctk.CTkTabview(main)
+        tabs.grid(row=4, column=0, sticky="nsew")
+        cases_tab = tabs.add("Test Cases")
+        run_tab = tabs.add("Kết quả Run Tests")
+        self.cases_tree = self._make_tree(
+            cases_tab,
+            ("id", "inputs", "expected", "exception", "technique", "reasoning"),
+            ["ID", "Inputs", "Expected Output", "Expected Exception",
+             "Kỹ thuật", "Reasoning"],
+            [76, 270, 140, 150, 92, 280],
+        )
+        self.cases_tree.bind("<Double-1>", self._on_case_double_click)
+        ToolTip(self.cases_tree, "Nhấp đúp vào cột Expected Output hoặc "
+                                 "Expected Exception để tự cấu hình kết quả "
+                                 "mong đợi cho từng case (FR-3.1).")
+        self.run_tree = self._make_tree(
+            run_tab,
+            ("id", "inputs", "expected", "actual", "status"),
+            ["ID", "Inputs", "Expected", "Actual", "Status"],
+            [76, 320, 180, 180, 90],
+        )
 
     def _make_tree(self, parent, cols, headings, widths) -> ttk.Treeview:
         wrap = ctk.CTkFrame(parent, fg_color="transparent")
@@ -413,7 +440,7 @@ class BTGApp(ctk.CTk):
         tree = ttk.Treeview(wrap, columns=cols, show="headings", height=12)
         for col, head, width in zip(cols, headings, widths):
             tree.heading(col, text=head)
-            tree.column(col, width=width, minwidth=60)
+            tree.column(col, width=width, minwidth=56)
         yscroll = ttk.Scrollbar(wrap, orient="vertical", command=tree.yview)
         xscroll = ttk.Scrollbar(wrap, orient="horizontal", command=tree.xview)
         tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
@@ -424,12 +451,40 @@ class BTGApp(ctk.CTk):
         wrap.grid_columnconfigure(0, weight=1)
         return tree
 
+    def _style_trees(self) -> None:
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        if self.dark_mode:
+            bg, fg, head_bg, sel = "#2B2B2B", "#FFFFFF", "#3A3A3A", "#1F6AA5"
+            pass_fg, fail_fg = "#4ADE80", "#F87171"
+        else:
+            bg, fg, head_bg, sel = "#FFFFFF", "#242424", "#E5E5E5", "#1F6AA5"
+            pass_fg, fail_fg = "#1F7A3D", "#B3261E"
+        style.configure("Treeview", background=bg, foreground=fg,
+                        fieldbackground=bg, rowheight=24, borderwidth=0)
+        style.configure("Treeview.Heading", background=head_bg, foreground=fg,
+                        relief="flat", font=("TkDefaultFont", 10, "bold"))
+        style.map("Treeview", background=[("selected", sel)],
+                  foreground=[("selected", "#FFFFFF")])
+        for tree in (getattr(self, "cases_tree", None),
+                     getattr(self, "run_tree", None)):
+            if tree is not None:
+                tree.tag_configure("Pass", foreground=pass_fg)
+                tree.tag_configure("Fail", foreground=fail_fg)
+
     def _build_statusbar(self) -> None:
         self.status_var = tk.StringVar(
-            value="Sẵn sàng. Cấu hình tham số rồi bấm 'Sinh Test Case'.")
-        bar = ctk.CTkLabel(self, textvariable=self.status_var, anchor="w",
-                           text_color="gray")
-        bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 8))
+            value="Sẵn sàng — cấu hình tham số rồi bấm 'Sinh Test Case'.")
+        bar = ctk.CTkFrame(self, height=26, corner_radius=0,
+                           fg_color=("#E7E7E7", "#1B1B1B"))
+        bar.grid(row=2, column=0, sticky="ew")
+        bar.grid_propagate(False)
+        ctk.CTkLabel(bar, textvariable=self.status_var, anchor="w",
+                     font=ctk.CTkFont(size=11),
+                     text_color="gray").pack(side="left", padx=12)
 
     def _set_status(self, text: str) -> None:
         self.status_var.set(text)
@@ -438,7 +493,7 @@ class BTGApp(ctk.CTk):
     def add_param(self, data: dict | None = None) -> None:
         card = ParamCard(self.params_frame, on_delete=self._delete_param,
                          data=data)
-        card.pack(fill="x", padx=6, pady=5)
+        card.pack(fill="x", padx=4, pady=5)
         self.param_cards.append(card)
 
     def _delete_param(self, card: ParamCard) -> None:
@@ -452,6 +507,12 @@ class BTGApp(ctk.CTk):
         for card in self.param_cards:
             card.destroy()
         self.param_cards.clear()
+
+    def _scroll_params_top(self) -> None:
+        try:
+            self.params_frame._parent_canvas.yview_moveto(0)
+        except (AttributeError, tk.TclError):
+            pass
 
     # ------------------------------------------------------------ import
     def _load_py_file(self) -> None:
@@ -474,8 +535,6 @@ class BTGApp(ctk.CTk):
         self.imported_specs = specs
         self.imported_menu.configure(values=[s.name for s in specs])
         self.imported_name_var.set(specs[0].name)
-        self._set_status(f"Đã đọc {len(specs)} hàm từ file. "
-                         "Chọn hàm rồi bấm 'Điền hàm đã chọn vào Form'.")
         self._apply_imported(keep_gt=True, gt_code=code)
 
     def _apply_imported(self, keep_gt: bool = False, gt_code: str = "") -> None:
@@ -501,6 +560,7 @@ class BTGApp(ctk.CTk):
             })
         if keep_gt and gt_code:
             self._set_gt_code(gt_code)
+        self._scroll_params_top()
         self._set_status(f"Đã điền hàm '{spec.name}' vào form.")
 
     def _load_gt_file(self) -> None:
@@ -593,7 +653,6 @@ class BTGApp(ctk.CTk):
             return
         case = self.cases[int(row_id)]
         if col_id == "#3":
-            current = "" if case.expected_output is None else str(case.expected_output)
             dialog = ctk.CTkInputDialog(
                 text=f"Expected Output cho {case.test_id}\n"
                      "(nhập dạng JSON nếu là số/chuỗi/list; để trống = xoá)",
@@ -611,7 +670,6 @@ class BTGApp(ctk.CTk):
                     case.expected_output = raw
                 case.expected_exception = None
         else:
-            current = case.expected_exception or ""
             dialog = ctk.CTkInputDialog(
                 text=f"Expected Exception cho {case.test_id}\n"
                      "(VD: ValueError, TypeError; để trống = xoá)",
@@ -685,8 +743,8 @@ class BTGApp(ctk.CTk):
             return
         summary = pass_fail_summary(results)
         self.summary_var.set(
-            f"Pass: {summary['passed']}  |  Fail: {summary['failed']}  |  "
-            f"Skipped: {summary['skipped']}  |  Pass rate: {summary['pass_rate']}%")
+            f"Pass {summary['passed']} · Fail {summary['failed']} · "
+            f"Skipped {summary['skipped']} · {summary['pass_rate']}%")
         self.run_tree.delete(*self.run_tree.get_children())
         for r in results:
             c = r.test_case
@@ -701,7 +759,7 @@ class BTGApp(ctk.CTk):
                         expected, actual, r.status),
                 tags=(r.status,),
             )
-        self._set_status("Đã chạy xong. Xem chi tiết ở tab 'Kết quả Run Tests'.")
+        self._set_status("Đã chạy xong — xem tab 'Kết quả Run Tests'.")
 
 
 def main() -> None:
