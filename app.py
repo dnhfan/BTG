@@ -308,14 +308,10 @@ class BTGApp(ctk.CTk):
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
         try:
-            logo = ctk.CTkLabel(header, image=app_logo(34), text="")
+            logo = ctk.CTkLabel(header, image=app_logo(40), text="")
         except OSError:
             logo = ctk.CTkLabel(header, image=icon("zap", 24), text="")
         logo.pack(side="left", padx=(14, 8))
-        ctk.CTkLabel(header, text="BTG",
-                     font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")
-        ctk.CTkLabel(header, text="Black-box Test Generator",
-                     text_color="gray").pack(side="left", padx=(8, 0))
 
         gen_btn = ctk.CTkButton(
             header, image=icon("zap"), text="Sinh Test Case", compound="left",
