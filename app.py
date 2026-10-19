@@ -284,6 +284,8 @@ class BTGApp(ctk.CTk):
         self.spec: FunctionSpec | None = None
         self.cases: list = []
         self.results: list | None = None  # ket qua Run Tests gan nhat
+        self.gt_code_str: str = ""        # code ham tham chieu (luu trong bien,
+        self.gt_source: str = ""          # khong con o text tren sidebar)
         self.imported_specs: list[FunctionSpec] = []
 
         self.grid_rowconfigure(1, weight=1)
@@ -402,14 +404,25 @@ class BTGApp(ctk.CTk):
                         "khuyên dùng khi hàm có > 3 tham số (FR-2.3).")
 
         section_label(sb, "Hàm tham chiếu").pack(anchor="w", padx=14, pady=(20, 6))
-        icon_button(sb, "database", "Mở file hàm tham chiếu", self._load_gt_file,
-                    tip="Nạp code hàm tham chiếu từ một file .py riêng. Hàm này "
-                        "dùng để tự điền Expected Output và chạy Run Tests (FR-3.2).",
+        icon_button(sb, "code", "Mở file hàm tham chiếu", self._load_gt_file,
+                    tip="Nạp code hàm tham chiếu (bản cài đặt chuẩn) từ một "
+                        "file .py. Hàm này dùng để tự điền Expected Output "
+                        "và chạy Run Tests (FR-3.2).",
                     height=34).pack(fill="x", padx=14)
-        self.gt_text = ctk.CTkTextbox(sb, height=150)
-        self.gt_text.pack(fill="x", padx=14, pady=(8, 14))
-        ToolTip(self.gt_text, "Code hàm tham chiếu, cùng tên với hàm đang cấu hình. "
-                              "Dán trực tiếp vào đây hoặc nạp từ file.")
+        # Trang thai gon: sidebar chi hien da nap hay chua + nut mo popup
+        # xem/sua code, thay cho o text to chiem cho truoc day.
+        gt_status = ctk.CTkFrame(sb, fg_color="transparent")
+        gt_status.pack(fill="x", padx=14, pady=(8, 0))
+        self.gt_status_icon = ctk.CTkLabel(gt_status, text="")
+        self.gt_status_icon.pack(side="left")
+        self.gt_status_var = tk.StringVar(value="Chưa có hàm tham chiếu")
+        ctk.CTkLabel(gt_status, textvariable=self.gt_status_var, anchor="w",
+                     text_color="gray", wraplength=230,
+                     justify="left").pack(side="left", padx=(6, 0))
+        icon_button(sb, "edit-2", "Xem / nhập code", self._open_gt_editor,
+                    tip="Mở cửa sổ xem và sửa code hàm tham chiếu, "
+                        "hoặc dán code trực tiếp vào đó.",
+                    height=32).pack(fill="x", padx=14, pady=(8, 14))
 
     def _build_main(self, body) -> None:
         main = ctk.CTkFrame(body, fg_color="transparent")
@@ -444,7 +457,7 @@ class BTGApp(ctk.CTk):
                     tip="Xuất bảng test case ra file Excel .xlsx (FR-4.1). "
                         "Nếu đã Run Tests, file kèm thêm cột Actual + Status.",
                     width=96, height=32).pack(side="left", padx=(0, 8))
-        icon_button(actions, "code", "Pytest", self._export_pytest,
+        icon_button(actions, "terminal", "Pytest", self._export_pytest,
                     tip="Sinh file test_generated.py dùng @pytest.mark.parametrize (FR-4.2).",
                     width=104, height=32).pack(side="left", padx=(0, 8))
         icon_button(actions, "play", "Run Tests", self._run_tests,
@@ -596,6 +609,7 @@ class BTGApp(ctk.CTk):
             messagebox.showinfo("BTG", "Không tìm thấy hàm top-level nào trong file.")
             return
         self.imported_specs = specs
+        self._import_source = pathlib.Path(path).name
         self.imported_menu.configure(values=[s.name for s in specs],
                                      state="normal")
         self.apply_btn.configure(state="normal")
@@ -624,7 +638,8 @@ class BTGApp(ctk.CTk):
                 "enum_text": ", ".join(map(str, p.enum_values)) or "admin, user, guest",
             })
         if keep_gt and gt_code:
-            self._set_gt_code(gt_code)
+            self._set_gt_code(gt_code,
+                              source=getattr(self, "_import_source", ""))
         self._scroll_params_top()
         self._set_status(f"Đã điền hàm '{spec.name}' vào form.")
 
@@ -639,15 +654,74 @@ class BTGApp(ctk.CTk):
         except OSError as exc:
             messagebox.showerror("BTG", f"Không đọc được file:\n{exc}")
             return
-        self._set_gt_code(code)
+        self._set_gt_code(code, source=pathlib.Path(path).name)
         self._set_status("Đã nạp hàm tham chiếu từ file.")
 
-    def _set_gt_code(self, code: str) -> None:
-        self.gt_text.delete("1.0", "end")
-        self.gt_text.insert("1.0", code)
+    # ------------------------------------------- ham tham chieu (FR-3.2)
+    def _set_gt_code(self, code: str, source: str = "") -> None:
+        self.gt_code_str = code
+        self.gt_source = source
+        self._refresh_gt_status()
 
     def _gt_code(self) -> str:
-        return self.gt_text.get("1.0", "end").strip()
+        return self.gt_code_str.strip()
+
+    def _refresh_gt_status(self) -> None:
+        code = self._gt_code()
+        if code:
+            lines = code.count("\n") + 1
+            origin = self.gt_source or "code đã nhập"
+            self.gt_status_var.set(f"Đã nạp: {origin} ({lines} dòng)")
+            self.gt_status_icon.configure(image=icon("check-circle", 16))
+        else:
+            self.gt_status_var.set("Chưa có hàm tham chiếu")
+            self.gt_status_icon.configure(image=icon("x-circle", 16))
+
+    def _open_gt_editor(self) -> None:
+        """Popup xem / sua / dan code ham tham chieu."""
+        win = ctk.CTkToplevel(self)
+        win.title("Hàm tham chiếu — code bản cài đặt chuẩn")
+        win.geometry("760x540")
+        win.minsize(560, 400)
+        win.transient(self)
+        ctk.CTkLabel(
+            win, anchor="w", text_color="gray",
+            text="Code hàm chuẩn, cùng tên với hàm đang cấu hình. BTG chạy "
+                 "hàm này để tự điền Expected Output và Run Tests.",
+        ).pack(fill="x", padx=14, pady=(12, 6))
+        text = ctk.CTkTextbox(win, font=ctk.CTkFont(family="Consolas", size=12))
+        text.pack(fill="both", expand=True, padx=14)
+        text.insert("1.0", self.gt_code_str)
+        ToolTip(text, "Dán code trực tiếp vào đây hoặc sửa code đã nạp, "
+                      "rồi bấm Lưu.")
+
+        btns = ctk.CTkFrame(win, fg_color="transparent")
+        btns.pack(fill="x", padx=14, pady=12)
+
+        def save() -> None:
+            self._set_gt_code(text.get("1.0", "end").strip(),
+                              source="code đã nhập")
+            self._set_status("Đã lưu code hàm tham chiếu.")
+            win.destroy()
+
+        def clear() -> None:
+            text.delete("1.0", "end")
+
+        icon_button(btns, "check-circle", "Lưu", save,
+                    tip="Lưu code và đóng cửa sổ.",
+                    width=100, height=32).pack(side="left")
+        icon_button(btns, "trash-2", "Xoá trắng", clear,
+                    tip="Xoá toàn bộ code trong ô (chưa lưu cho đến khi bấm Lưu).",
+                    width=110, height=32).pack(side="left", padx=(8, 0))
+        icon_button(btns, "x-circle", "Đóng", win.destroy,
+                    tip="Đóng mà không lưu thay đổi.",
+                    width=100, height=32).pack(side="right")
+        win.after(80, win.lift)
+        win.after(100, text.focus_set)
+        win.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - win.winfo_width()) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - win.winfo_height()) // 2
+        win.geometry(f"+{max(x, 0)}+{max(y, 0)}")
 
     # ---------------------------------------------------------- generate
     def _build_spec(self) -> FunctionSpec:
