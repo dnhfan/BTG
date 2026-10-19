@@ -1,0 +1,5 @@
+streamlit>=1.30
+openpyxl>=3.1
+pytest>=8.0
+# Tuỳ chọn: giúp sinh chuỗi hợp lệ theo regex chính xác hơn
+exrex>=0.11
