@@ -24,43 +24,60 @@ COLUMNS = [
     "Reasoning",
 ]
 
+# Cot bo sung khi xuat kem ket qua chay test (bao cao test day du hon:
+# vua co "de bai" vua co "cham diem" theo chuan ISO/IEC/IEEE 29119)
+RESULT_COLUMNS = ["Actual Output", "Actual Exception", "Status"]
 
-def _rows(cases: list[TestCase]) -> list[dict]:
+
+def _rows(cases: list[TestCase], results: list | None = None) -> list[dict]:
+    by_id = {}
+    if results:
+        by_id = {r.test_case.test_id: r for r in results}
     rows = []
     for case in cases:
-        rows.append(
-            {
-                "Testcase ID": case.test_id,
-                "Inputs": json.dumps(case.inputs, ensure_ascii=False, default=str),
-                "Expected Output": "" if case.expected_output is None else str(case.expected_output),
-                "Expected Exception": case.expected_exception or "",
-                "Test Technique": case.technique,
-                "Reasoning": case.reasoning,
-            }
-        )
+        row = {
+            "Testcase ID": case.test_id,
+            "Inputs": json.dumps(case.inputs, ensure_ascii=False, default=str),
+            "Expected Output": "" if case.expected_output is None else str(case.expected_output),
+            "Expected Exception": case.expected_exception or "",
+            "Test Technique": case.technique,
+            "Reasoning": case.reasoning,
+        }
+        if results:
+            r = by_id.get(case.test_id)
+            row["Actual Output"] = "" if r is None or r.actual_output is None else str(r.actual_output)
+            row["Actual Exception"] = "" if r is None else (r.actual_exception or "")
+            row["Status"] = "" if r is None else r.status
+        rows.append(row)
     return rows
 
 
-def export_csv(cases: list[TestCase]) -> bytes:
+def _all_columns(results: list | None) -> list[str]:
+    return COLUMNS + RESULT_COLUMNS if results else COLUMNS
+
+
+def export_csv(cases: list[TestCase], results: list | None = None) -> bytes:
+    columns = _all_columns(results)
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=COLUMNS)
+    writer = csv.DictWriter(buffer, fieldnames=columns)
     writer.writeheader()
-    writer.writerows(_rows(cases))
+    writer.writerows(_rows(cases, results))
     return buffer.getvalue().encode("utf-8-sig")  # BOM de Excel doc dung tieng Viet
 
 
-def export_excel(cases: list[TestCase]) -> bytes:
+def export_excel(cases: list[TestCase], results: list | None = None) -> bytes:
     from openpyxl import Workbook
     from openpyxl.styles import Font
 
+    columns = _all_columns(results)
     wb = Workbook()
     ws = wb.active
     ws.title = "Test Cases"
-    ws.append(COLUMNS)
+    ws.append(columns)
     for cell in ws[1]:
         cell.font = Font(bold=True)
-    for row in _rows(cases):
-        ws.append([row[col] for col in COLUMNS])
+    for row in _rows(cases, results):
+        ws.append([row[col] for col in columns])
     for col in ws.columns:
         width = max(len(str(c.value or "")) for c in col) + 2
         ws.column_dimensions[col[0].column_letter].width = min(width, 60)

@@ -9,7 +9,7 @@ import itertools
 import pytest
 
 from btg.executor import apply_oracle, pass_fail_summary, run_test_cases
-from btg.exporter import export_csv, generate_pytest_code
+from btg.exporter import export_csv, export_excel, generate_pytest_code
 from btg.generators import generate_bva, generate_ep, generate_pairwise, generate_test_cases
 from btg.models import FunctionSpec, ParamSpec, ParamType
 from btg.parser import parse_python_code
@@ -167,3 +167,21 @@ def test_export_csv_and_pytest_code():
     compile(code, "test_generated.py", "exec")  # code sinh ra phai hop le
     assert "@pytest.mark.parametrize" in code
     assert "check_age" in code
+
+
+def test_export_with_results_adds_actual_and_status_columns():
+    cases = generate_test_cases(age_spec(), use_ep=True, use_bva=True)
+    cases = apply_oracle(age_spec(), cases, GROUND_TRUTH)
+    results = run_test_cases(age_spec(), cases, GROUND_TRUTH)
+
+    plain = export_csv(cases).decode("utf-8-sig")
+    assert "Actual Output" not in plain and "Status" not in plain
+
+    full = export_csv(cases, results).decode("utf-8-sig")
+    header = full.splitlines()[0]
+    assert "Actual Output" in header and "Actual Exception" in header
+    assert "Status" in header
+    assert "Pass" in full
+
+    excel = export_excel(cases, results)
+    assert excel[:2] == b"PK"  # file xlsx la zip

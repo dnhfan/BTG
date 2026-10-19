@@ -272,6 +272,7 @@ class BTGApp(ctk.CTk):
         self.param_cards: list[ParamCard] = []
         self.spec: FunctionSpec | None = None
         self.cases: list = []
+        self.results: list | None = None  # ket qua Run Tests gan nhat
         self.imported_specs: list[FunctionSpec] = []
 
         self.grid_rowconfigure(1, weight=1)
@@ -417,10 +418,12 @@ class BTGApp(ctk.CTk):
         actions = ctk.CTkFrame(main, fg_color="transparent")
         actions.grid(row=3, column=0, sticky="ew", pady=(10, 6))
         icon_button(actions, "file-text", "CSV", self._export_csv,
-                    tip="Xuất bảng test case ra file CSV (FR-4.1).",
+                    tip="Xuất bảng test case ra file CSV (FR-4.1). "
+                        "Nếu đã Run Tests, file kèm thêm cột Actual + Status.",
                     width=96, height=32).pack(side="left", padx=(0, 8))
         icon_button(actions, "grid", "Excel", self._export_excel,
-                    tip="Xuất bảng test case ra file Excel .xlsx (FR-4.1).",
+                    tip="Xuất bảng test case ra file Excel .xlsx (FR-4.1). "
+                        "Nếu đã Run Tests, file kèm thêm cột Actual + Status.",
                     width=96, height=32).pack(side="left", padx=(0, 8))
         icon_button(actions, "code", "Pytest", self._export_pytest,
                     tip="Sinh file test_generated.py dùng @pytest.mark.parametrize (FR-4.2).",
@@ -644,6 +647,8 @@ class BTGApp(ctk.CTk):
             except Exception as exc:  # noqa: BLE001
                 note = f" (Không áp dụng được hàm tham chiếu: {exc})"
         self.spec, self.cases = spec, cases
+        self.results = None  # case moi -> ket qua chay cu khong con hop le
+        self.run_tree.delete(*self.run_tree.get_children())
         self._fill_cases_tree()
         self.summary_var.set("")
         self._set_status(f"Đã sinh {len(cases)} test case cho hàm "
@@ -702,6 +707,9 @@ class BTGApp(ctk.CTk):
             case.expected_exception = raw or None
             if raw:
                 case.expected_output = None
+        self.results = None  # expected doi -> phai Run Tests lai
+        self.run_tree.delete(*self.run_tree.get_children())
+        self.summary_var.set("")
         self._fill_cases_tree()
         self._set_status(f"Đã cập nhật kết quả mong đợi cho {case.test_id}.")
 
@@ -712,6 +720,9 @@ class BTGApp(ctk.CTk):
             return False
         return True
 
+    def _results_note(self) -> str:
+        return " (kèm Actual + Status)" if self.results else ""
+
     def _export_csv(self) -> None:
         if not self._require_cases():
             return
@@ -720,8 +731,8 @@ class BTGApp(ctk.CTk):
             filetypes=[("CSV files", "*.csv")], initialfile="test_cases.csv")
         if path:
             with open(path, "wb") as fh:
-                fh.write(export_csv(self.cases))
-            self._set_status(f"Đã xuất CSV: {path}")
+                fh.write(export_csv(self.cases, self.results))
+            self._set_status(f"Đã xuất CSV{self._results_note()}: {path}")
 
     def _export_excel(self) -> None:
         if not self._require_cases():
@@ -731,8 +742,8 @@ class BTGApp(ctk.CTk):
             filetypes=[("Excel files", "*.xlsx")], initialfile="test_cases.xlsx")
         if path:
             with open(path, "wb") as fh:
-                fh.write(export_excel(self.cases))
-            self._set_status(f"Đã xuất Excel: {path}")
+                fh.write(export_excel(self.cases, self.results))
+            self._set_status(f"Đã xuất Excel{self._results_note()}: {path}")
 
     def _export_pytest(self) -> None:
         if not self._require_cases():
@@ -762,6 +773,7 @@ class BTGApp(ctk.CTk):
         except Exception as exc:  # noqa: BLE001
             messagebox.showerror("BTG", f"Lỗi khi chạy test:\n{exc}")
             return
+        self.results = results
         summary = pass_fail_summary(results)
         self.summary_var.set(
             f"Pass {summary['passed']} · Fail {summary['failed']} · "

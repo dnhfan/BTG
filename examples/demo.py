@@ -39,8 +39,8 @@ if __name__ == "__main__":
     results = run_test_cases(spec, cases, ground_truth)
     print("Tom tat chay test:", pass_fail_summary(results))
 
-    (OUT / "test_cases.csv").write_bytes(export_csv(cases))
-    (OUT / "test_cases.xlsx").write_bytes(export_excel(cases))
+    (OUT / "test_cases.csv").write_bytes(export_csv(cases, results))
+    (OUT / "test_cases.xlsx").write_bytes(export_excel(cases, results))
     (OUT / "test_generated.py").write_text(
         generate_pytest_code(spec, cases, ground_truth), encoding="utf-8"
     )
