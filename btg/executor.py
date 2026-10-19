@@ -5,7 +5,7 @@
   Expected Output dung (hoac Exception dung) vao chinh test case do.
 - run_test_cases(): thuc thi va so sanh, tra ve ket qua Pass/Fail tung case.
 
-LUU Y AN TOAN: chi chay code Ground Truth do chinh nguoi dung cung cap
+LUU Y AN TOAN: chi chay code ham tham chieu do chinh nguoi dung cung cap
 tren may cua ho (dung cho muc dich hoc tap / kiem thu cuc bo).
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ def load_ground_truth(code: str, function_name: str) -> Callable:
     func = namespace.get(function_name)
     if not callable(func):
         raise ValueError(
-            f"Khong tim thay ham '{function_name}' trong file Ground Truth."
+            f"Khong tim thay ham '{function_name}' trong file hàm tham chiếu."
         )
     return func
 

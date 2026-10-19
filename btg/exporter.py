@@ -4,7 +4,7 @@
   Cot: Testcase ID, Inputs, Expected Output, Test Technique, Reasoning
   (bo sung cot Expected Exception de file pytest va bao cao ro rang hon)
 - generate_pytest_code      : file test_generated.py (FR-4.2)
-  dung @pytest.mark.parametrize, nhung kem code Ground Truth neu co
+  dung @pytest.mark.parametrize, nhung kem code ham tham chieu neu co
   de file chay duoc ngay ma khong can import them.
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ def generate_pytest_code(
     lines.append("import pytest")
     lines.append("")
     if ground_truth_code:
-        lines.append("# ===== Ground Truth / ham duoc kiem thu (nhung tu file nguoi dung) =====")
+        lines.append("# ===== Ham tham chieu / ham duoc kiem thu (nhung tu file nguoi dung) =====")
         lines.append(ground_truth_code.rstrip())
         lines.append("")
     else:

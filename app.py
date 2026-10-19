@@ -381,14 +381,14 @@ class BTGApp(ctk.CTk):
         ToolTip(pw_box, "Bao phủ mọi cặp giá trị giữa các tham số — "
                         "khuyên dùng khi hàm có > 3 tham số (FR-2.3).")
 
-        section_label(sb, "Ground Truth (Oracle)").pack(anchor="w", padx=14, pady=(20, 6))
-        icon_button(sb, "database", "Mở file Ground Truth", self._load_gt_file,
-                    tip="Nạp code hàm chuẩn từ một file .py riêng. Hàm chuẩn "
+        section_label(sb, "Hàm tham chiếu").pack(anchor="w", padx=14, pady=(20, 6))
+        icon_button(sb, "database", "Mở file hàm tham chiếu", self._load_gt_file,
+                    tip="Nạp code hàm tham chiếu từ một file .py riêng. Hàm này "
                         "dùng để tự điền Expected Output và chạy Run Tests (FR-3.2).",
                     height=34).pack(fill="x", padx=14)
         self.gt_text = ctk.CTkTextbox(sb, height=150)
         self.gt_text.pack(fill="x", padx=14, pady=(8, 14))
-        ToolTip(self.gt_text, "Code hàm chuẩn, cùng tên với hàm đang cấu hình. "
+        ToolTip(self.gt_text, "Code hàm tham chiếu, cùng tên với hàm đang cấu hình. "
                               "Dán trực tiếp vào đây hoặc nạp từ file.")
 
     def _build_main(self, body) -> None:
@@ -405,7 +405,7 @@ class BTGApp(ctk.CTk):
         func_entry = ctk.CTkEntry(toolbar, textvariable=self.func_name_var, width=230)
         func_entry.pack(side="left")
         ToolTip(func_entry, "Tên hàm cần sinh test case — phải trùng tên hàm "
-                            "trong Ground Truth nếu muốn Run Tests.")
+                            "trong hàm tham chiếu nếu muốn Run Tests.")
         icon_button(toolbar, "plus", "Thêm tham số", lambda: self.add_param(),
                     tip="Thêm một tham số mới vào hàm (FR-1.1).",
                     width=140, height=32).pack(side="left", padx=(12, 0))
@@ -426,7 +426,7 @@ class BTGApp(ctk.CTk):
                     tip="Sinh file test_generated.py dùng @pytest.mark.parametrize (FR-4.2).",
                     width=104, height=32).pack(side="left", padx=(0, 8))
         icon_button(actions, "play", "Run Tests", self._run_tests,
-                    tip="Chạy toàn bộ test case với Ground Truth, "
+                    tip="Chạy toàn bộ test case với hàm tham chiếu, "
                         "hiển thị tỉ lệ Pass/Fail (FR-4.3).",
                     width=118, height=32).pack(side="left")
         self.summary_var = tk.StringVar(value="")
@@ -586,7 +586,7 @@ class BTGApp(ctk.CTk):
 
     def _load_gt_file(self) -> None:
         path = filedialog.askopenfilename(
-            title="Chọn file Ground Truth",
+            title="Chọn file hàm tham chiếu",
             filetypes=[("Python files", "*.py")])
         if not path:
             return
@@ -596,7 +596,7 @@ class BTGApp(ctk.CTk):
             messagebox.showerror("BTG", f"Không đọc được file:\n{exc}")
             return
         self._set_gt_code(code)
-        self._set_status("Đã nạp Ground Truth từ file.")
+        self._set_status("Đã nạp hàm tham chiếu từ file.")
 
     def _set_gt_code(self, code: str) -> None:
         self.gt_text.delete("1.0", "end")
@@ -640,9 +640,9 @@ class BTGApp(ctk.CTk):
         if gt:
             try:
                 cases = apply_oracle(spec, cases, gt)
-                note = " Đã dùng Ground Truth để điền Expected Output."
+                note = " Đã dùng hàm tham chiếu để điền Expected Output."
             except Exception as exc:  # noqa: BLE001
-                note = f" (Không áp dụng được Ground Truth: {exc})"
+                note = f" (Không áp dụng được hàm tham chiếu: {exc})"
         self.spec, self.cases = spec, cases
         self._fill_cases_tree()
         self.summary_var.set("")
@@ -755,7 +755,7 @@ class BTGApp(ctk.CTk):
         gt = self._gt_code()
         if not gt:
             messagebox.showwarning(
-                "BTG", "Cần có Ground Truth ở sidebar trước khi chạy test.")
+                "BTG", "Cần có hàm tham chiếu ở sidebar trước khi chạy test.")
             return
         try:
             results = run_test_cases(self.spec, self.cases, gt)

@@ -24,7 +24,7 @@ Kiểu dữ liệu hỗ trợ: `int`, `float`, `string` (length, regex), `enum`,
 | FR-2.2 | BVA cho số và độ dài chuỗi |
 | FR-2.3 | Pairwise cho hàm nhiều tham số (> 3) |
 | FR-2.4 | Gán nhãn lý do cho từng case (VD `[BVA] age_Min_Minus_1`) + khử trùng lặp |
-| FR-3.1 / 3.2 | Oracle: nhấp đúp vào từng test case để tự cấu hình Expected Output / Exception, hoặc đính kèm hàm chuẩn (Ground Truth, dán code hoặc nạp từ file .py riêng) để tự điền kết quả đúng |
+| FR-3.1 / 3.2 | Hàm tham chiếu (Ground Truth / Oracle trong SRS): nhấp đúp vào từng test case để tự cấu hình Expected Output / Exception, hoặc đính kèm hàm tham chiếu — bản cài đặt chuẩn của hàm, dán code hoặc nạp từ file .py riêng — để tự điền kết quả đúng |
 | FR-4.1 | Xuất bảng Test Case ra **Excel (.xlsx)** / **CSV** |
 | FR-4.2 | Xuất file **`test_generated.py`** dùng `@pytest.mark.parametrize` — chạy được ngay |
 | FR-4.3 | Nút **Run Tests** trên UI, hiển thị tỉ lệ Pass/Fail |
@@ -43,6 +43,13 @@ icon là bộ Feather Icons (MIT) dạng **SVG** lưu ở `assets/icons/svg/` v�
 pip install cairosvg   # chỉ cần khi render lại icon
 python tools/build_icons.py
 ```
+
+> **Lưu ý cho Ubuntu/Linux:** Tkinter là gói hệ thống, không đi kèm bản cài
+> Python mặc định như trên Windows/macOS. Nếu chạy app báo
+> `ModuleNotFoundError: No module named 'tkinter'` thì cài gói khớp đúng
+> phiên bản Python của bạn trước (kiểm tra bằng `python3 --version`), ví dụ
+> Python 3.14: `sudo apt install python3.14-tk` (bản khác: `python3-tk` /
+> `python3.12-tk`...). Cài xong chạy lại `python app.py`, không cần tạo lại venv.
 
 ```bash
 git clone https://github.com/thienba33/BTG.git
@@ -92,10 +99,11 @@ BTG/
 │   ├── parser.py           # AST parser: .py -> spec (FR-1.3)
 │   ├── values.py           # Giá trị đại diện / không hợp lệ cho từng kiểu
 │   ├── generators.py       # Core: EP / BVA / Pairwise + khử trùng (FE-02)
-│   ├── executor.py         # Oracle + chạy test, tỉ lệ Pass/Fail (FE-03, FR-4.3)
+│   ├── executor.py         # Hàm tham chiếu + chạy test, tỉ lệ Pass/Fail (FE-03, FR-4.3)
 │   └── exporter.py         # Xuất CSV / Excel / pytest (FE-04)
 ├── examples/
 │   ├── sample_function.py  # Hàm mẫu: check_age, register
+│   ├── file_mau_test_import.py  # 4 hàm mẫu để test tính năng Mở file .py (FR-1.3)
 │   └── demo.py             # Demo chạy bằng dòng lệnh
 ├── tests/
 │   └── test_btg.py         # 12 unit test cho core
