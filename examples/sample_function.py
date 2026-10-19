@@ -1,7 +1,7 @@
 """Ham mau de thu BTG: phan loai hoc luc + kiem tra tuoi.
 
 Thu ngay:
-1. Upload file nay tren giao dien Streamlit, hoac
+1. Mo bang app desktop (python app.py) roi chon file nay, hoac
 2. Chay: python examples/demo.py
 """
 from typing import Literal

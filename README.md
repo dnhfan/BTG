@@ -22,7 +22,7 @@ Kiểu dữ liệu hỗ trợ: `int`, `float`, `string` (length, regex), `enum`,
 | FR-2.2 | BVA cho số và độ dài chuỗi |
 | FR-2.3 | Pairwise cho hàm nhiều tham số (> 3) |
 | FR-2.4 | Gán nhãn lý do cho từng case (VD `[BVA] age_Min_Minus_1`) + khử trùng lặp |
-| FR-3.1 / 3.2 | Oracle: cấu hình Expected Output / Exception, hoặc đính kèm hàm chuẩn (Ground Truth) để tự điền kết quả đúng |
+| FR-3.1 / 3.2 | Oracle: nhấp đúp vào từng test case để tự cấu hình Expected Output / Exception, hoặc đính kèm hàm chuẩn (Ground Truth, dán code hoặc nạp từ file .py riêng) để tự điền kết quả đúng |
 | FR-4.1 | Xuất bảng Test Case ra **Excel (.xlsx)** / **CSV** |
 | FR-4.2 | Xuất file **`test_generated.py`** dùng `@pytest.mark.parametrize` — chạy được ngay |
 | FR-4.3 | Nút **Run Tests** trên UI, hiển thị tỉ lệ Pass/Fail |
@@ -31,16 +31,22 @@ Hiệu năng (NFR-01): sinh 38 test case cho hàm 4 tham số trong ~0.003 giây
 
 ## Cài đặt & chạy giao diện
 
+Giao diện là **ứng dụng desktop bằng CustomTkinter** (không dùng Streamlit,
+không mở trình duyệt). Toàn bộ nhãn/biểu tượng trên UI là text thuần —
+không dùng icon emoji; khi cần icon, nạp file SVG/PNG qua `CTkImage`.
+
 ```bash
 git clone https://github.com/thienba33/BTG.git
 cd BTG
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-streamlit run app.py
+python app.py
 ```
 
-Mở trình duyệt tại `http://localhost:8501`.
+Trên giao diện: di chuột qua các ô nhập/nút bấm để xem tooltip hướng dẫn
+(NFR-02); nhấp đúp vào cột *Expected Output* / *Expected Exception* trong
+bảng kết quả để tự sửa kết quả mong đợi cho từng test case (FR-3.1).
 
 ## Chạy thử không cần giao diện (demo)
 
@@ -68,7 +74,7 @@ pytest -q
 
 ```
 BTG/
-├── app.py                  # Lớp giao diện (Streamlit UI)
+├── app.py                  # Lớp giao diện (CustomTkinter desktop UI)
 ├── btg/
 │   ├── models.py           # ParamSpec / FunctionSpec / TestCase
 │   ├── validation.py       # Kiểm tra spec (FR-1.4)
