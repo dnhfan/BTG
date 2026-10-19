@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -31,7 +32,8 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 TYPE_OPTIONS = [t.value for t in ParamType]
-ICON_DIR = pathlib.Path(__file__).resolve().parent / "assets" / "icons"
+ASSETS_DIR = pathlib.Path(__file__).resolve().parent / "assets"
+ICON_DIR = ASSETS_DIR / "icons"
 
 GREEN = "#1F7A3D"
 GREEN_HOVER = "#176132"
@@ -49,6 +51,11 @@ def icon(name: str, size: int = 20) -> ctk.CTkImage:
             size=(size, size),
         )
     return _icon_cache[key]
+
+
+def app_logo(size: int = 34) -> ctk.CTkImage:
+    """Logo BTG (assets/logo.png) dung o header va icon cua so."""
+    return ctk.CTkImage(Image.open(ASSETS_DIR / "logo.png"), size=(size, size))
 
 
 def section_label(master, text: str) -> ctk.CTkLabel:
@@ -260,6 +267,7 @@ class BTGApp(ctk.CTk):
         self.geometry("1340x860")
         self.minsize(1080, 660)
         self.dark_mode = True
+        self._set_window_icon()
 
         self.param_cards: list[ParamCard] = []
         self.spec: FunctionSpec | None = None
@@ -279,13 +287,30 @@ class BTGApp(ctk.CTk):
             "enum_text": "admin, user, guest",
         })
 
+    def _set_window_icon(self) -> None:
+        """Dat logo lam icon cua so (taskbar / title bar)."""
+        try:
+            if sys.platform.startswith("win"):
+                ico = ASSETS_DIR / "app_icon.ico"
+                if ico.exists():
+                    self.iconbitmap(default=str(ico))
+            png = ASSETS_DIR / "app_icon.png"
+            if png.exists():
+                self._window_icon = tk.PhotoImage(file=str(png))
+                self.iconphoto(True, self._window_icon)
+        except tk.TclError:
+            pass
+
     # ------------------------------------------------------------- header
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, height=56, corner_radius=0,
                               fg_color=("#E7E7E7", "#1B1B1B"))
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
-        logo = ctk.CTkLabel(header, image=icon("zap", 24), text="")
+        try:
+            logo = ctk.CTkLabel(header, image=app_logo(34), text="")
+        except OSError:
+            logo = ctk.CTkLabel(header, image=icon("zap", 24), text="")
         logo.pack(side="left", padx=(14, 8))
         ctk.CTkLabel(header, text="BTG",
                      font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")

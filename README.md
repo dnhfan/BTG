@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo.png" width="130" alt="BTG logo"></p>
+
 # BTG — Black-box Test Generator
 
 Phần mềm **sinh Test Case tự động bằng phương pháp Hộp đen (Black-box)** cho các hàm Python,
