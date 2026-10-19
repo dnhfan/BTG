@@ -110,7 +110,7 @@ BTG/
 │   ├── file_mau_test_import.py  # 4 hàm mẫu để test tính năng Mở file .py (FR-1.3)
 │   └── demo.py             # Demo chạy bằng dòng lệnh
 ├── tests/
-│   └── test_btg.py         # 15 unit test cho core
+│   └── test_btg.py         # 13 unit test cho core
 └── requirements.txt
 ```
 

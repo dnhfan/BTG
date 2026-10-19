@@ -75,7 +75,7 @@ Các cách chạy khác (không cần giao diện):
 
 ```bash
 python examples/demo.py   # demo sinh test cho hàm register, ghi vào output/
-pytest -q                 # chạy unit test của chính BTG (15 test)
+pytest -q                 # chạy unit test của chính BTG (13 test)
 ```
 
 ## 3. Kiến trúc & cấu trúc mã nguồn
@@ -162,21 +162,6 @@ File mẫu để thử: `examples/sample_function.py` (hàm `check_age`,
 chưa tick kỹ thuật nào, app sẽ báo lỗi rõ ràng khi bấm Sinh). Mặc
 định bật EP + BVA. Bật **Pairwise** khi hàm có nhiều tham số (> 3) để
 giữ số lượng test case ở mức hợp lý mà vẫn bao phủ tương tác theo cặp.
-
-Mỗi kỹ thuật có tuỳ chọn nâng cao (chỉ kích hoạt khi kỹ thuật được
-tick, di chuột vào để xem tooltip giải thích):
-
-- **Kiểu biên (BVA):**
-  - *Robust — 6 điểm* (mặc định, đúng SRS FR-2.2): `min-1, min, min+1,
-    max-1, max, max+1` — gồm cả điểm ngoài miền để bắt lỗi lệch biên.
-  - *Cơ bản — 5 điểm:* `min, min+1, điểm giữa (nominal), max-1, max`
-    — kiểu BVA cổ điển, chỉ trong miền hợp lệ.
-  - *Tối thiểu — 4 điểm:* `min, min+1, max-1, max` — gọn nhất.
-- **Mức bao phủ (Pairwise):**
-  - *2-way (theo cặp)*: bao phủ mọi cặp giá trị — Pairwise chuẩn.
-  - *3-way (theo bộ ba)*: bao phủ mọi bộ ba giá trị — kỹ hơn, bắt lỗi
-    tương tác 3 tham số, nhưng sinh nhiều case hơn (VD hàm `register`
-    4 tham số: 38 case ở 2-way → 61 case ở 3-way).
 
 Mẹo giao diện: giữa khung tham số và khung kết quả có **thanh chia
 kéo được** — kéo lên/xuống để ưu tiên vùng đang làm việc. Các nút

@@ -52,83 +52,38 @@ def generate_ep(spec: FunctionSpec) -> list[TestCase]:
 
 # -------------------------------------------------------------------- BVA ---
 
-BVA_VARIANTS = ("robust", "basic5", "min4")
-
-
-def _dedupe_points(points: list[tuple[object, str]]) -> list[tuple[object, str]]:
-    seen: set = set()
-    out: list[tuple[object, str]] = []
-    for value, label in points:
-        key = repr(value)
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append((value, label))
-    return out
-
-
-def _bva_points(param: ParamSpec, variant: str = "robust") -> list[tuple[object, str]]:
-    """[(gia_tri, nhan), ...] cac diem bien cua 1 tham so theo bien the:
-
-    - "robust" (mac dinh, dung SRS FR-2.2): 6 diem min-1, min, min+1,
-      max-1, max, max+1 — gom ca diem ngoai mien (bat loi lech bien).
-    - "basic5": 5 diem kieu co dien min, min+1, nominal, max-1, max
-      (chi trong mien hop le).
-    - "min4": 4 diem toi thieu min, min+1, max-1, max (2 gia tri moi
-      bien, phia hop le).
-    """
-    if variant not in BVA_VARIANTS:
-        raise ValueError(f"BVA variant khong hop le: {variant}")
+def _bva_points(param: ParamSpec) -> list[tuple[object, str]]:
+    """[(gia_tri, nhan), ...] cac diem bien cua 1 tham so."""
     points: list[tuple[object, str]] = []
-    if param.type in (ParamType.INT, ParamType.FLOAT) \
-            and param.min_value is not None and param.max_value is not None:
-        is_int = param.type == ParamType.INT
-        lo = int(param.min_value) if is_int else float(param.min_value)
-        hi = int(param.max_value) if is_int else float(param.max_value)
-        step = 1 if is_int else 1.0
-        nominal = valid_value(param)
-        if not is_int:
-            nominal = round(float(nominal), 2)
-        catalog = {
-            "Min_Minus_1": lo - step, "Min": lo, "Min_Plus_1": lo + step,
-            "Nominal": nominal,
-            "Max_Minus_1": hi - step, "Max": hi, "Max_Plus_1": hi + step,
-        }
-        if variant == "robust":
-            labels = ["Min_Minus_1", "Min", "Min_Plus_1",
-                      "Max_Minus_1", "Max", "Max_Plus_1"]
-        elif variant == "basic5":
-            labels = ["Min", "Min_Plus_1", "Nominal", "Max_Minus_1", "Max"]
-        else:  # min4
-            labels = ["Min", "Min_Plus_1", "Max_Minus_1", "Max"]
-        raw = [(catalog[label], label) for label in labels]
-        if not is_int:
-            raw = [(round(v, 2), label) for v, label in raw]
-        points = [(v, f"{param.name}_{label}") for v, label in raw]
+    if param.type == ParamType.INT and param.min_value is not None and param.max_value is not None:
+        lo, hi = int(param.min_value), int(param.max_value)
+        raw = [
+            (lo - 1, "Min_Minus_1", "Exception"),
+            (lo, "Min", None),
+            (lo + 1, "Min_Plus_1", None),
+            (hi - 1, "Max_Minus_1", None),
+            (hi, "Max", None),
+            (hi + 1, "Max_Plus_1", "Exception"),
+        ]
+        points = [(v, f"{param.name}_{label}") for v, label, _ in raw]
+    elif param.type == ParamType.FLOAT and param.min_value is not None and param.max_value is not None:
+        lo, hi = float(param.min_value), float(param.max_value)
+        step = 1.0
+        raw = [(lo - step, "Min_Minus_1"), (lo, "Min"), (lo + step, "Min_Plus_1"),
+               (hi - step, "Max_Minus_1"), (hi, "Max"), (hi + step, "Max_Plus_1")]
+        points = [(round(v, 2), f"{param.name}_{label}") for v, label in raw]
     elif param.type == ParamType.STRING:
         lo = param.min_length or 0
         hi = param.max_length
-        nominal_len = len(valid_value(param))
-        if variant == "robust":
-            lengths: list[tuple[int, str]] = [
-                (lo - 1, "MinLen_Minus_1"), (lo, "MinLen"), (lo + 1, "MinLen_Plus_1")]
-            if hi is not None:
-                lengths += [(hi - 1, "MaxLen_Minus_1"), (hi, "MaxLen"),
-                            (hi + 1, "MaxLen_Plus_1")]
-        elif variant == "basic5":
-            lengths = [(lo, "MinLen"), (lo + 1, "MinLen_Plus_1"),
-                       (nominal_len, "NominalLen")]
-            if hi is not None:
-                lengths += [(hi - 1, "MaxLen_Minus_1"), (hi, "MaxLen")]
-        else:  # min4
-            lengths = [(lo, "MinLen"), (lo + 1, "MinLen_Plus_1")]
-            if hi is not None:
-                lengths += [(hi - 1, "MaxLen_Minus_1"), (hi, "MaxLen")]
+        lengths: list[tuple[int, str]] = []
+        lengths += [(lo - 1, "MinLen_Minus_1"), (lo, "MinLen"), (lo + 1, "MinLen_Plus_1")]
+        if hi is not None:
+            lengths += [(hi - 1, "MaxLen_Minus_1"), (hi, "MaxLen"), (hi + 1, "MaxLen_Plus_1")]
         for length, label in lengths:
             if length < 0:
                 continue
             points.append((string_of_length(param, length), f"{param.name}_{label}"))
-    return _dedupe_points(points)
+    return points
 
 
 def _is_out_of_bounds(param: ParamSpec, value: object) -> bool:
@@ -145,11 +100,11 @@ def _is_out_of_bounds(param: ParamSpec, value: object) -> bool:
     return False
 
 
-def generate_bva(spec: FunctionSpec, variant: str = "robust") -> list[TestCase]:
+def generate_bva(spec: FunctionSpec) -> list[TestCase]:
     cases: list[TestCase] = []
     nominal = _nominal_inputs(spec)
     for param in spec.params:
-        for value, label in _bva_points(param, variant):
+        for value, label in _bva_points(param):
             inputs = dict(nominal)
             inputs[param.name] = value
             out = _is_out_of_bounds(param, value)
@@ -166,37 +121,28 @@ def generate_bva(spec: FunctionSpec, variant: str = "robust") -> list[TestCase]:
 
 # --------------------------------------------------------------- Pairwise ---
 
-def generate_pairwise(spec: FunctionSpec, strength: int = 2) -> list[TestCase]:
-    """Greedy t-way covering (strength=2 la Pairwise chuan FR-2.3;
-    strength=3 la 3-way: phu moi bo 3 (tham so, gia tri))."""
+def generate_pairwise(spec: FunctionSpec) -> list[TestCase]:
+    """Greedy all-pairs: moi case moi phu nhieu cap chua duoc phu nhat."""
     if len(spec.params) < 2:
         return []
-    strength = max(2, min(strength, len(spec.params)))
     cand = {p.name: candidate_values(p) for p in spec.params}
     names = [p.name for p in spec.params]
 
-    # Tat ca bo can phu: ((ten, gia tri) x strength) tren cac nhom tham so
+    # Tat ca cap can phu: ((param_i, val_i), (param_j, val_j)), i < j
     uncovered: set = set()
-    for idxs in itertools.combinations(range(len(names)), strength):
-        for combo in itertools.product(*[cand[names[i]] for i in idxs]):
-            uncovered.add(tuple((names[i], repr(v)) for i, v in zip(idxs, combo)))
-
-    def tuples_of(inputs: dict) -> set:
-        found = set()
-        for idxs in itertools.combinations(range(len(names)), strength):
-            found.add(tuple((names[i], repr(inputs[names[i]])) for i in idxs))
-        return found
-
-    def partial_tuples(trial: dict) -> set:
-        keys = list(trial.keys())
-        found = set()
-        for combo_keys in itertools.combinations(keys, strength):
-            found.add(tuple((k, repr(trial[k])) for k in combo_keys))
-        return found
+    for i, j in itertools.combinations(range(len(names)), 2):
+        for vi in cand[names[i]]:
+            for vj in cand[names[j]]:
+                uncovered.add(((names[i], repr(vi)), (names[j], repr(vj))))
+    def pairs_of(inputs: dict) -> set:
+        pairs = set()
+        for i, j in itertools.combinations(range(len(names)), 2):
+            pairs.add(((names[i], repr(inputs[names[i]])), (names[j], repr(inputs[names[j]]))))
+        return pairs
 
     cases: list[TestCase] = []
     guard = 0
-    while uncovered and guard < 2000:
+    while uncovered and guard < 500:
         guard += 1
         # Xay dung 1 case tham lam: chon tung tham so sao cho phu nhieu nhat
         chosen: dict = {}
@@ -205,26 +151,30 @@ def generate_pairwise(spec: FunctionSpec, strength: int = 2) -> list[TestCase]:
             for val in cand[name]:
                 trial = dict(chosen)
                 trial[name] = val
-                gain = len(partial_tuples(trial) & uncovered)
+                # Dem so cap chua phu ma (cac tham so da chon + gia tri nay) tao ra
+                partial_pairs = set()
+                keys = list(trial.keys())
+                for i, j in itertools.combinations(range(len(keys)), 2):
+                    partial_pairs.add(((keys[i], repr(trial[keys[i]])), (keys[j], repr(trial[keys[j]]))))
+                gain = len(partial_pairs & uncovered)
                 if gain > best_gain:
                     best_val, best_gain = val, gain
             chosen[name] = best_val
-        covered = tuples_of(chosen)
+        covered = pairs_of(chosen)
         if not (covered & uncovered):
             # Khong tien trien duoc nua -> lay to hop tiep theo trong product
             for combo in itertools.product(*[cand[n] for n in names]):
                 trial = dict(zip(names, combo))
-                if tuples_of(trial) & uncovered:
+                if pairs_of(trial) & uncovered:
                     chosen = trial
-                    covered = tuples_of(chosen)
+                    covered = pairs_of(chosen)
                     break
             else:
                 break
         uncovered -= covered
-        reasoning = ("[Pairwise] Pair_Coverage" if strength == 2
-                     else f"[Pairwise] {strength}-Way_Coverage")
         cases.append(
-            TestCase(inputs=chosen, technique="Pairwise", reasoning=reasoning)
+            TestCase(inputs=chosen, technique="Pairwise",
+                     reasoning="[Pairwise] Pair_Coverage")
         )
     return cases
 
@@ -250,8 +200,6 @@ def generate_test_cases(
     use_ep: bool = True,
     use_bva: bool = True,
     use_pairwise: bool = False,
-    bva_variant: str = "robust",
-    pairwise_strength: int = 2,
 ) -> list[TestCase]:
     errors = validate_spec(spec)
     if errors:
@@ -261,9 +209,9 @@ def generate_test_cases(
     if use_ep:
         cases.extend(generate_ep(spec))
     if use_bva:
-        cases.extend(generate_bva(spec, variant=bva_variant))
+        cases.extend(generate_bva(spec))
     # SRS FR-2.3: Pairwise chi chay khi nguoi dung bat tuy chon nay
     # (khuyen nghi dung khi ham co > 3 tham so).
     if use_pairwise:
-        cases.extend(generate_pairwise(spec, strength=pairwise_strength))
+        cases.extend(generate_pairwise(spec))
     return deduplicate(cases)
