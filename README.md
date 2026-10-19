@@ -44,6 +44,9 @@ pip install cairosvg   # chỉ cần khi render lại icon
 python tools/build_icons.py
 ```
 
+**Tài liệu cho team:** xem [docs/HUONG_DAN_SU_DUNG.md](docs/HUONG_DAN_SU_DUNG.md)
+để nắm toàn bộ chức năng, cách dùng từng tính năng và quy ước phát triển.
+
 > **Lưu ý cho Ubuntu/Linux:** Tkinter là gói hệ thống, không đi kèm bản cài
 > Python mặc định như trên Windows/macOS. Nếu chạy app báo
 > `ModuleNotFoundError: No module named 'tkinter'` thì cài gói khớp đúng
@@ -93,6 +96,7 @@ BTG/
 ├── app.py                  # Lớp giao diện (CustomTkinter desktop UI)
 ├── assets/icons/           # Icon Feather: nguồn SVG (svg/) + PNG đã render
 ├── tools/build_icons.py    # Render SVG -> PNG cho giao diện
+├── docs/                   # Tài liệu chức năng & hướng dẫn cho team
 ├── btg/
 │   ├── models.py           # ParamSpec / FunctionSpec / TestCase
 │   ├── validation.py       # Kiểm tra spec (FR-1.4)
