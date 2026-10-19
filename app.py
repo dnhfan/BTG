@@ -35,8 +35,16 @@ TYPE_OPTIONS = [t.value for t in ParamType]
 ASSETS_DIR = pathlib.Path(__file__).resolve().parent / "assets"
 ICON_DIR = ASSETS_DIR / "icons"
 
-GREEN = "#1F7A3D"
-GREEN_HOVER = "#176132"
+# Bang mau thong nhat (UX polish):
+# - PRIMARY: mau accent duy nhat, chi dung cho hanh dong quan trong nhat
+#   (nut Sinh Test Case), checkbox va mau chon trong bang.
+# - NEUTRAL: cac nut phu (mo file, xuat file, chay test...) dung mau
+#   trung tinh de giao dien bot phan tan.
+PRIMARY = "#1F6AA5"
+PRIMARY_HOVER = "#144870"
+NEUTRAL = ("#D9D9D9", "#3B3B3B")
+NEUTRAL_HOVER = ("#C6C6C6", "#4A4A4A")
+NEUTRAL_TEXT = ("#1F1F1F", "#F2F2F2")
 
 _icon_cache: dict = {}
 
@@ -69,6 +77,9 @@ def section_label(master, text: str) -> ctk.CTkLabel:
 
 def icon_button(master, icon_name: str, text: str, command,
                 tip: str | None = None, **kwargs) -> ctk.CTkButton:
+    kwargs.setdefault("fg_color", NEUTRAL)
+    kwargs.setdefault("hover_color", NEUTRAL_HOVER)
+    kwargs.setdefault("text_color", NEUTRAL_TEXT)
     btn = ctk.CTkButton(master, image=icon(icon_name), text=text,
                         compound="left", anchor="w", command=command, **kwargs)
     if tip:
@@ -137,7 +148,7 @@ class ParamCard(ctk.CTkFrame):
         self.allow_null_var = tk.BooleanVar(value=bool(data.get("allow_null", False)))
 
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=10, pady=(8, 0))
+        header.pack(fill="x", padx=12, pady=(10, 0))
         ctk.CTkLabel(header, textvariable=self.title_var,
                      font=ctk.CTkFont(weight="bold")).pack(side="left")
         del_btn = ctk.CTkButton(
@@ -149,7 +160,7 @@ class ParamCard(ctk.CTkFrame):
         ToolTip(del_btn, "Xoá tham số này khỏi hàm")
 
         row = ctk.CTkFrame(self, fg_color="transparent")
-        row.pack(fill="x", padx=10, pady=4)
+        row.pack(fill="x", padx=12, pady=6)
         ctk.CTkLabel(row, text="Tên", width=34, anchor="w").pack(side="left")
         name_entry = ctk.CTkEntry(row, textvariable=self.name_var, width=150)
         name_entry.pack(side="left", padx=(0, 12))
@@ -166,7 +177,7 @@ class ParamCard(ctk.CTkFrame):
                            "enum (tập giá trị cố định) hoặc bool.")
 
         self.config_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.config_frame.pack(fill="x", padx=10, pady=(2, 10))
+        self.config_frame.pack(fill="x", padx=12, pady=(4, 12))
         self._rebuild_config()
         self._refresh_title()
 
@@ -316,7 +327,8 @@ class BTGApp(ctk.CTk):
 
         gen_btn = ctk.CTkButton(
             header, image=icon("zap"), text="Sinh Test Case", compound="left",
-            width=160, height=36, fg_color=GREEN, hover_color=GREEN_HOVER,
+            width=160, height=36, fg_color=PRIMARY, hover_color=PRIMARY_HOVER,
+            text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"), command=self._generate)
         gen_btn.pack(side="right", padx=(8, 14))
         ToolTip(gen_btn, "Sinh test case theo các kỹ thuật đã chọn. "
@@ -354,14 +366,21 @@ class BTGApp(ctk.CTk):
                     tip="Tự trích xuất tên hàm, tham số và type hint bằng AST "
                         "(FR-1.3). Literal[...] được hiểu là enum.",
                     height=34).pack(fill="x", padx=14)
-        self.imported_name_var = tk.StringVar(value="")
-        self.imported_menu = ctk.CTkOptionMenu(sb, values=["(chưa có hàm)"],
-                                               variable=self.imported_name_var,
-                                               height=34)
-        self.imported_menu.pack(fill="x", padx=14, pady=(8, 0))
-        icon_button(sb, "download", "Điền vào form", self._apply_imported,
-                    tip="Nạp hàm đang chọn vào form cấu hình bên phải.",
-                    height=34).pack(fill="x", padx=14, pady=(8, 0))
+        ctk.CTkLabel(sb, text="Hàm trong file", anchor="w",
+                     font=ctk.CTkFont(size=11),
+                     text_color=("gray45", "gray65")).pack(anchor="w", padx=14, pady=(10, 2))
+        self.imported_name_var = tk.StringVar(value="(chưa có hàm)")
+        self.imported_menu = ctk.CTkOptionMenu(
+            sb, values=["(chưa có hàm)"], variable=self.imported_name_var,
+            height=34, fg_color=NEUTRAL, button_color=("#BFBFBF", "#2E2E2E"),
+            button_hover_color=NEUTRAL_HOVER, text_color=NEUTRAL_TEXT,
+            state="disabled")
+        self.imported_menu.pack(fill="x", padx=14)
+        self.apply_btn = icon_button(
+            sb, "download", "Điền vào form", self._apply_imported,
+            tip="Nạp hàm đang chọn vào form cấu hình bên phải.",
+            height=34, state="disabled")
+        self.apply_btn.pack(fill="x", padx=14, pady=(8, 0))
 
         section_label(sb, "Kỹ thuật sinh test").pack(anchor="w", padx=14, pady=(20, 6))
         self.use_ep_var = tk.BooleanVar(value=True)
@@ -445,7 +464,7 @@ class BTGApp(ctk.CTk):
             ("id", "inputs", "expected", "exception", "technique", "reasoning"),
             ["ID", "Inputs", "Expected Output", "Expected Exception",
              "Test Technique", "Reasoning"],
-            [76, 270, 140, 150, 92, 280],
+            [76, 250, 140, 165, 125, 255],
         )
         self.cases_tree.bind("<Double-1>", self._on_case_double_click)
         ToolTip(self.cases_tree, "Nhấp đúp vào cột Expected Output hoặc "
@@ -482,22 +501,42 @@ class BTGApp(ctk.CTk):
         except tk.TclError:
             pass
         if self.dark_mode:
-            bg, fg, head_bg, sel = "#2B2B2B", "#FFFFFF", "#3A3A3A", "#1F6AA5"
+            bg, fg, head_bg, sel = "#2B2B2B", "#FFFFFF", "#3A3A3A", PRIMARY
+            odd_bg = "#333333"
+            sb_bg, sb_trough = "#4D4D4D", "#242424"
             pass_fg, fail_fg = "#4ADE80", "#F87171"
         else:
-            bg, fg, head_bg, sel = "#FFFFFF", "#242424", "#E5E5E5", "#1F6AA5"
+            bg, fg, head_bg, sel = "#FFFFFF", "#242424", "#E5E5E5", PRIMARY
+            odd_bg = "#F4F4F4"
+            sb_bg, sb_trough = "#B8B8B8", "#EFEFEF"
             pass_fg, fail_fg = "#1F7A3D", "#B3261E"
+        # Font monospace de doc JSON de hon; dong cao, thoang
+        import tkinter.font as tkfont
+        families = set(tkfont.families())
+        mono = next((f for f in ("Consolas", "DejaVu Sans Mono",
+                                 "Cascadia Mono", "Courier New")
+                     if f in families), "TkFixedFont")
         style.configure("Treeview", background=bg, foreground=fg,
-                        fieldbackground=bg, rowheight=24, borderwidth=0)
+                        fieldbackground=bg, rowheight=28, borderwidth=0,
+                        bordercolor=bg, lightcolor=bg, darkcolor=bg,
+                        font=(mono, 11))
         style.configure("Treeview.Heading", background=head_bg, foreground=fg,
-                        relief="flat", font=("TkDefaultFont", 10, "bold"))
+                        relief="flat", borderwidth=0,
+                        font=("TkDefaultFont", 11, "bold"))
         style.map("Treeview", background=[("selected", sel)],
                   foreground=[("selected", "#FFFFFF")])
+        # Thanh cuon theo theme thay vi mac dinh cua OS
+        for orient in ("Vertical", "Horizontal"):
+            style.configure(f"{orient}.TScrollbar", background=sb_bg,
+                            troughcolor=sb_trough, borderwidth=0,
+                            bordercolor=sb_trough, lightcolor=sb_bg,
+                            darkcolor=sb_bg, arrowcolor=fg)
         for tree in (getattr(self, "cases_tree", None),
                      getattr(self, "run_tree", None)):
             if tree is not None:
                 tree.tag_configure("Pass", foreground=pass_fg)
                 tree.tag_configure("Fail", foreground=fail_fg)
+                tree.tag_configure("oddrow", background=odd_bg)
 
     def _build_statusbar(self) -> None:
         self.status_var = tk.StringVar(
@@ -517,7 +556,7 @@ class BTGApp(ctk.CTk):
     def add_param(self, data: dict | None = None) -> None:
         card = ParamCard(self.params_frame, on_delete=self._delete_param,
                          data=data)
-        card.pack(fill="x", padx=4, pady=5)
+        card.pack(fill="x", padx=6, pady=6)
         self.param_cards.append(card)
 
     def _delete_param(self, card: ParamCard) -> None:
@@ -557,7 +596,9 @@ class BTGApp(ctk.CTk):
             messagebox.showinfo("BTG", "Không tìm thấy hàm top-level nào trong file.")
             return
         self.imported_specs = specs
-        self.imported_menu.configure(values=[s.name for s in specs])
+        self.imported_menu.configure(values=[s.name for s in specs],
+                                     state="normal")
+        self.apply_btn.configure(state="normal")
         self.imported_name_var.set(specs[0].name)
         self._apply_imported(keep_gt=True, gt_code=code)
 
@@ -659,6 +700,7 @@ class BTGApp(ctk.CTk):
         for idx, c in enumerate(self.cases):
             self.cases_tree.insert(
                 "", "end", iid=str(idx),
+                tags=("oddrow",) if idx % 2 else (),
                 values=(
                     c.test_id,
                     json.dumps(c.inputs, ensure_ascii=False, default=str),
@@ -779,18 +821,19 @@ class BTGApp(ctk.CTk):
             f"Pass {summary['passed']} · Fail {summary['failed']} · "
             f"Skipped {summary['skipped']} · {summary['pass_rate']}%")
         self.run_tree.delete(*self.run_tree.get_children())
-        for r in results:
+        for idx, r in enumerate(results):
             c = r.test_case
             expected = c.expected_exception or (
                 "" if c.expected_output is None else str(c.expected_output))
             actual = r.actual_exception or (
                 "" if r.actual_output is None else str(r.actual_output))
+            tags = (r.status, "oddrow") if idx % 2 else (r.status,)
             self.run_tree.insert(
                 "", "end",
                 values=(c.test_id,
                         json.dumps(c.inputs, ensure_ascii=False, default=str),
                         expected, actual, r.status),
-                tags=(r.status,),
+                tags=tags,
             )
         self._set_status("Đã chạy xong — xem tab 'Kết quả Run Tests'.")
 
