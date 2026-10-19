@@ -98,6 +98,33 @@ def test_pairwise_covers_all_pairs():
                 ), f"Chua phu cap {names[i]}={vi}, {names[j]}={vj}"
 
 
+def test_bva_variants():
+    spec = FunctionSpec("f", [ParamSpec("x", ParamType.INT, min_value=0, max_value=100)])
+    robust = {c.inputs["x"] for c in generate_bva(spec)}
+    assert robust == {-1, 0, 1, 99, 100, 101}
+    basic5 = {c.inputs["x"] for c in generate_bva(spec, variant="basic5")}
+    assert basic5 == {0, 1, 50, 99, 100}
+    assert all(c.expected_exception is None
+               for c in generate_bva(spec, variant="basic5"))
+    min4 = {c.inputs["x"] for c in generate_bva(spec, variant="min4")}
+    assert min4 == {0, 1, 99, 100}
+
+
+def test_pairwise_3way_covers_all_triples():
+    spec = FunctionSpec("g", [
+        ParamSpec("a", ParamType.ENUM, enum_values=["x", "y", "z"]),
+        ParamSpec("b", ParamType.BOOL),
+        ParamSpec("c", ParamType.ENUM, enum_values=["m", "n"]),
+    ])
+    cases = generate_pairwise(spec, strength=3)
+    cand = {p.name: candidate_values(p) for p in spec.params}
+    for combo in itertools.product(cand["a"], cand["b"], cand["c"]):
+        assert any(
+            (c.inputs["a"], c.inputs["b"], c.inputs["c"]) == combo
+            for c in cases
+        ), f"Chua phu bo ba {combo}"
+
+
 # ------------------------------------------------------------------ dedup
 def test_deduplication_and_ids():
     cases = generate_test_cases(age_spec(), use_ep=True, use_bva=True)
