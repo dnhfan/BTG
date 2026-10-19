@@ -444,7 +444,7 @@ class BTGApp(ctk.CTk):
             cases_tab,
             ("id", "inputs", "expected", "exception", "technique", "reasoning"),
             ["ID", "Inputs", "Expected Output", "Expected Exception",
-             "Kỹ thuật", "Reasoning"],
+             "Test Technique", "Reasoning"],
             [76, 270, 140, 150, 92, 280],
         )
         self.cases_tree.bind("<Double-1>", self._on_case_double_click)
