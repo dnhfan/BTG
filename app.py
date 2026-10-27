@@ -379,6 +379,11 @@ class BTGApp(ctk.CTk):
         self._build_body()
         self._build_statusbar()
         self._style_trees()
+        for sequence, action in (("<Control-o>", self._load_py_file),
+                                 ("<Control-Return>", self._generate),
+                                 ("<Control-r>", self._run_tests),
+                                 ("<Control-Shift-N>", self.add_param)):
+            self.bind(sequence, lambda event, callback=action: callback())
         self.add_param({
             "name": "param1", "type": "int",
             "min_value": 0, "max_value": 100,
@@ -409,7 +414,7 @@ class BTGApp(ctk.CTk):
         header.grid_columnconfigure((0, 2), weight=1, uniform="header")
         header.grid_columnconfigure(1, weight=0)
         icon_button(header, "folder", "Mở file Python", self._load_py_file,
-                    tip="Mở file Python và trích xuất các hàm.",
+                    tip="Mở file Python và trích xuất các hàm (Ctrl+O).",
                     border_width=0, height=36, width=164).grid(
                         row=0, column=0, sticky="w", padx=12, pady=9)
         title = ctk.CTkFrame(header, fg_color="transparent")
@@ -523,7 +528,7 @@ class BTGApp(ctk.CTk):
         ctk.CTkLabel(heading, text="Cấu hình kiểm thử",
                      font=ctk.CTkFont(size=20, weight="bold")).pack(side="left")
         icon_button(heading, "zap", "Sinh test case", self._generate,
-                    tip="Sinh test theo các kỹ thuật đã chọn.",
+                    tip="Sinh test theo các kỹ thuật đã chọn (Ctrl+Enter).",
                     fg_color=PRIMARY, hover_color=PRIMARY_HOVER,
                     text_color=PRIMARY_TEXT, border_width=0,
                     width=160, height=36).pack(side="right")
@@ -619,7 +624,7 @@ class BTGApp(ctk.CTk):
         self.cases_hint = self._placeholder(
             cases_tab, "sliders", "Sẵn sàng tạo bộ kiểm thử",
             "Cấu hình tham số và chọn kỹ thuật bên trái.\n"
-            "Bấm Sinh test case để bắt đầu.")
+            "Bấm Sinh test case hoặc Ctrl+Enter để bắt đầu.")
         self.run_hint = self._placeholder(
             run_tab, "play", "Chưa có kết quả chạy",
             "Nạp hàm tham chiếu, sinh test case rồi bấm Chạy test.\n"
@@ -848,7 +853,12 @@ class BTGApp(ctk.CTk):
 
     def _open_gt_editor(self) -> None:
         """Popup xem / sua / dan code ham tham chieu."""
-        win = ctk.CTkToplevel(self)
+        existing = getattr(self, "_gt_editor", None)
+        if existing is not None and existing.winfo_exists():
+            existing.lift()
+            existing.focus_set()
+            return
+        win = self._gt_editor = ctk.CTkToplevel(self)
         win.title("Hàm tham chiếu")
         win.geometry("760x540")
         win.minsize(560, 400)
@@ -876,6 +886,8 @@ class BTGApp(ctk.CTk):
         def clear() -> None:
             text.delete("1.0", "end")
 
+        win.bind("<Escape>", lambda event: win.destroy())
+        win.bind("<Control-s>", lambda event: save())
         icon_button(btns, "check-circle", "Lưu", save,
                     tip="Lưu code và đóng cửa sổ.",
                     width=100, height=34, fg_color=PRIMARY,
@@ -941,6 +953,7 @@ class BTGApp(ctk.CTk):
         self.run_tree.delete(*self.run_tree.get_children())
         self.run_hint.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._fill_cases_tree()
+        self.tabs.set("Test case")
         self.summary_var.set("Chưa có kết quả chạy")
         self._set_status(f"Đã sinh {len(cases)} test case cho hàm "
                          f"'{spec.name}'.{note}")
@@ -1088,6 +1101,7 @@ class BTGApp(ctk.CTk):
                 tags=tags,
             )
         self.run_hint.place_forget()
+        self.tabs.set("Kết quả chạy")
         self._set_status("Đã chạy xong — xem tab Kết quả chạy.")
 
 
