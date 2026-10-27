@@ -46,7 +46,9 @@ thuộc cấu trúc cài đặt bên trong hàm. Đổi cách cài đặt mà gi
 Hiệu năng (NFR-01): hàm dưới 5 tham số sinh test case trong < 2 giây
 (thực tế ~0,003 giây cho hàm 4 tham số, 38 test case).
 
-![Giao diện chính của BTG](images/giao_dien_chinh.png)
+![Giao diện sáng của BTG](images/giao_dien_chinh.png)
+
+![Giao diện tối và kết quả chạy](images/giao_dien_toi.png)
 
 ## 2. Cài đặt & chạy
 
@@ -108,9 +110,16 @@ nằm ở `btg/`, giao diện chỉ đọc form → tạo `FunctionSpec` → g�
 
 ## 4. Hướng dẫn sử dụng từng chức năng
 
-Giao diện gồm: **header** (logo, nút chuyển Sáng/Tối, nút *Sinh Test
-Case*), **sidebar trái** (nhập liệu & kỹ thuật), **vùng chính** (form
-tham số, nút xuất/chạy, bảng kết quả), **thanh trạng thái** ở đáy.
+Giao diện theo phong cách GNOME/Adwaita, triển khai bằng CustomTkinter
+(không phải GTK/libadwaita native). **Thanh tiêu đề** gồm mở file, tên app
+và chuyển sáng/tối; **sidebar trái** chứa nhập liệu và kỹ thuật;
+**vùng chính** gồm cấu hình, nút *Sinh test case*, nút xuất/chạy và bảng
+kết quả; **thanh trạng thái** ở đáy. Mặc định dùng giao diện sáng.
+
+Phím tắt: `Ctrl+O` mở file Python, `Ctrl+Shift+N` thêm tham số,
+`Ctrl+Enter` sinh test case, `Ctrl+R` chạy test. Trong cửa sổ hàm tham
+chiếu, `Ctrl+S` lưu và `Esc` đóng. Có thể kéo đường chia giữa form và
+bảng kết quả để điều chỉnh không gian làm việc.
 
 > Mẹo: di chuột lên bất kỳ ô nhập/nút bấm nào cũng có **tooltip** giải
 > thích ngắn (NFR-02).
@@ -118,7 +127,7 @@ tham số, nút xuất/chạy, bảng kết quả), **thanh trạng thái** ở 
 ### 4.1. Cấu hình hàm & tham số thủ công (FR-1.1, FR-1.2)
 
 - Nhập **tên hàm** ở ô "Hàm" (phải trùng tên hàm trong hàm tham chiếu
-  nếu muốn dùng Run Tests).
+  nếu muốn dùng Chạy test).
 - Bấm **Thêm tham số** để thêm thẻ tham số; bấm icon thùng rác trên thẻ
   để xoá (hàm luôn phải có ít nhất 1 tham số).
 - Mỗi thẻ tham số gồm: **Tên**, **Kiểu**, và phần cấu hình theo kiểu:
@@ -130,7 +139,7 @@ tham số, nút xuất/chạy, bảng kết quả), **thanh trạng thái** ở 
 | `enum` | Danh sách giá trị (cách nhau bởi dấu phẩy), Allow null | Giá trị ngoài danh sách = không hợp lệ |
 | `bool` | (không có cấu hình) | Tự hiểu 2 giá trị True/False |
 
-**Validation (FR-1.4):** khi bấm Sinh Test Case, BTG kiểm tra và báo
+**Validation (FR-1.4):** khi bấm Sinh test case, BTG kiểm tra và báo
 lỗi cụ thể nếu: Min > Max, Min length > Max length, regex sai cú pháp,
 trùng tên tham số, tên không hợp lệ trong Python, danh sách enum rỗng.
 
@@ -165,7 +174,7 @@ giữ số lượng test case ở mức hợp lý mà vẫn bao phủ tương t�
 
 Mẹo giao diện: giữa khung tham số và khung kết quả có **thanh chia
 kéo được** — kéo lên/xuống để ưu tiên vùng đang làm việc. Các nút
-CSV / Excel / Pytest / Run Tests **chỉ sáng lên khi đã có test case**;
+CSV / Excel / Pytest / Chạy test **chỉ sáng lên khi đã có test case**;
 khi bảng còn trống, ở giữa bảng có dòng gợi ý bước tiếp theo.
 
 ### 4.4. Hàm tham chiếu — khái niệm & cách dùng (FR-3.2)
@@ -177,7 +186,7 @@ test**. Nó đóng vai trò "đáp án mẫu":
 - Khi sinh test case, BTG **chạy** hàm tham chiếu với từng bộ input để
   tự điền cột **Expected Output / Expected Exception** (thay vì người
   dùng phải tính tay).
-- Nó là cơ sở để **Run Tests** đối chiếu và tính Pass/Fail.
+- Nó là cơ sở để **Chạy test** đối chiếu và tính Pass/Fail.
 - Khi xuất file pytest, code hàm tham chiếu được nhúng vào file để
   file test chạy độc lập được ngay.
 
@@ -194,11 +203,11 @@ Cách nạp (sidebar → mục **Hàm tham chiếu**):
 
 Nếu không có hàm tham chiếu: vẫn sinh test case và xuất file bình
 thường, nhưng cột Expected để trống (case không hợp lệ ghi chung là
-"Exception") và không chạy Run Tests được.
+"Exception") và không chạy Chạy test được.
 
 ### 4.5. Sinh test case & đọc bảng kết quả (FR-2.4)
 
-Bấm **Sinh Test Case** (nút màu xanh ở header). Bảng *Test Cases* hiển
+Bấm **Sinh test case** (nút màu xanh trong vùng cấu hình). Bảng *Test case* hiển
 thị kết quả với các cột (tên cột theo tiếng Anh chuẩn, khớp file xuất):
 
 | Cột | Ý nghĩa |
@@ -225,12 +234,12 @@ Ngoài cách dùng hàm tham chiếu, có thể cấu hình tay: **nhấp đúp*
 - Điền 1 trong 2 cột sẽ tự xoá cột còn lại (một case chỉ có một loại
   kết quả mong đợi).
 
-Lưu ý: sửa Expected sẽ **huỷ kết quả Run Tests trước đó** (vì đáp án
+Lưu ý: sửa Expected sẽ **huỷ kết quả Chạy test trước đó** (vì đáp án
 đã thay đổi thì kết quả chấm cũ không còn giá trị) — cần chạy lại.
 
-### 4.7. Run Tests & đọc kết quả (FR-4.3)
+### 4.7. Chạy test & đọc kết quả (FR-4.3)
 
-Bấm **Run Tests** (cần có hàm tham chiếu trước). BTG chạy toàn bộ case
+Bấm **Chạy test** (cần có hàm tham chiếu trước). BTG chạy toàn bộ case
 với hàm tham chiếu và đối chiếu với Expected đã có:
 
 - **Pass**: kết quả thực tế khớp Expected (đúng giá trị, hoặc ném đúng
@@ -242,7 +251,7 @@ với hàm tham chiếu và đối chiếu với Expected đã có:
 
 Thanh tóm tắt cạnh nút hiển thị `Pass x · Fail y · Skipped z · tỉ lệ %`
 (tỉ lệ tính trên số case Pass+Fail). Chi tiết từng case ở tab **Kết
-quả Run Tests**: cột Expected vs Actual đặt cạnh nhau, dòng Pass màu
+quả chạy**: cột Expected vs Actual đặt cạnh nhau, dòng Pass màu
 xanh, Fail màu đỏ.
 
 ### 4.8. Xuất kết quả (FR-4.1, FR-4.2)
@@ -253,11 +262,11 @@ xanh, Fail màu đỏ.
 | **Excel** | `test_cases.xlsx` | Như CSV, thêm định dạng sẵn (tiêu đề đậm, độ rộng cột tự chỉnh) |
 | **Pytest** | `test_generated.py` | File test chạy được ngay bằng `pytest`, dùng `@pytest.mark.parametrize`; nhúng sẵn code hàm tham chiếu nếu có |
 
-**Báo cáo đầy đủ:** nếu xuất CSV/Excel **sau khi đã Run Tests**, file
+**Báo cáo đầy đủ:** nếu xuất CSV/Excel **sau khi đã Chạy test**, file
 sẽ có thêm 3 cột **Actual Output**, **Actual Exception**, **Status** —
 tức file xuất ra là một báo cáo test hoàn chỉnh (vừa có dữ liệu test,
 vừa có kết quả chấm), đúng thông lệ tài liệu test case theo chuẩn
-ISO/IEC/IEEE 29119. Nếu chưa Run Tests, file chỉ gồm 6 cột gốc.
+ISO/IEC/IEEE 29119. Nếu chưa Chạy test, file chỉ gồm 6 cột gốc.
 
 ---
 
@@ -281,9 +290,9 @@ Các bước trên giao diện:
 2. **Chỉnh miền giá trị** cho đúng nghiệp vụ: `username` Min length =
    3, Max length = 20; `age` Min = 18, Max = 60.
 3. Sidebar: giữ EP + BVA, **bật thêm Pairwise** (hàm có 4 tham số).
-4. Bấm **Sinh Test Case** → nhận **38 test case** trong chưa đến 1
+4. Bấm **Sinh test case** → nhận **38 test case** trong chưa đến 1
    giây; cột Expected đã được hàm tham chiếu điền sẵn.
-5. Bấm **Run Tests** → **38 Pass / 0 Fail (100%)**.
+5. Bấm **Chạy test** → **38 Pass / 0 Fail (100%)**.
 6. Bấm **Excel** → nhận file báo cáo 38 dòng kèm cột Actual + Status.
 
 Thử cảm nhận vai trò "đáp án chuẩn": mở **Xem / nhập code**, sửa điều
@@ -335,7 +344,7 @@ A: Bạn đang dùng Ubuntu — cài gói hệ thống khớp phiên bản Pytho
 `sudo apt install python3-tk` (hoặc `python3.14-tk` cho Python 3.14).
 Xem thêm mục 2.
 
-**Q: Điền form xong bấm Sinh Test Case bị báo lỗi đỏ?**
+**Q: Điền form xong bấm Sinh test case bị báo lỗi đỏ?**
 A: Đó là validation (FR-1.4). Đọc nội dung lỗi: thường là Min > Max,
 độ dài min > max, regex sai, hoặc trùng tên tham số. Sửa đúng chỗ được
 chỉ ra rồi sinh lại.
@@ -345,15 +354,15 @@ A: Parser chỉ đọc được type hint, không biết Min/Max nghiệp vụ n
 đang dùng khoảng mặc định. Chỉnh lại Min/Max/độ dài trên form (mục
 4.2) — số case sẽ thay đổi theo miền giá trị.
 
-**Q: Run Tests báo "Cần có hàm tham chiếu ở sidebar"?**
+**Q: Chạy test báo "Cần có hàm tham chiếu ở sidebar"?**
 A: Chưa nạp hàm tham chiếu. Dùng nút **Mở file hàm tham chiếu** hoặc
 **Xem / nhập code** để dán code bản cài đặt chuẩn vào (mục 4.4).
 
-**Q: Run Tests báo không tìm thấy hàm trong file hàm tham chiếu?**
+**Q: Chạy test báo không tìm thấy hàm trong file hàm tham chiếu?**
 A: Tên hàm ở ô "Hàm" không khớp tên hàm trong code tham chiếu. Hai
 tên phải giống hệt nhau.
 
-**Q: Vì sao nhiều case bị Skipped khi Run Tests?**
+**Q: Vì sao nhiều case bị Skipped khi Chạy test?**
 A: Các case đó chưa có Expected Output/Exception (chưa có hàm tham
 chiếu lúc sinh, hoặc bạn đã xoá Expected). Nạp hàm tham chiếu rồi
 sinh lại test case, hoặc điền Expected thủ công bằng nhấp đúp (mục
