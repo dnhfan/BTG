@@ -2,10 +2,11 @@
 
 Chay:  python app.py
 
-Phong cach giao dien desktop: thanh header, sidebar chia muc, nut bam
-icon + chu ngan, bang du lieu khop theme. Icon la Feather Icons (MIT)
-dang SVG o assets/icons/svg/, render san sang PNG bang
-tools/build_icons.py vi Tkinter khong hien thi SVG truc tiep.
+Phong cach giao dien desktop theo GNOME Human Interface Guidelines &
+Adwaita: headerbar GNOME, sidebar chia muc, nut bam icon + chu, bang
+du lieu khop theme sang/toi. Icon la Feather Icons (MIT) dang SVG o
+assets/icons/svg/, render san sang PNG bang tools/build_icons.py vi
+Tkinter khong hien thi SVG truc tiep.
 
 Lop UI tach rieng khoi logic (NFR-03): UI chi doc form -> FunctionSpec,
 roi goi btg.generators / btg.executor / btg.exporter.
@@ -28,23 +29,83 @@ from btg.models import FunctionSpec, ParamSpec, ParamType
 from btg.parser import parse_python_code
 from btg.validation import validate_spec
 
-ctk.set_appearance_mode("dark")
+ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 TYPE_OPTIONS = [t.value for t in ParamType]
 ASSETS_DIR = pathlib.Path(__file__).resolve().parent / "assets"
 ICON_DIR = ASSETS_DIR / "icons"
 
-# Bang mau thong nhat (UX polish):
-# - PRIMARY: mau accent duy nhat, chi dung cho hanh dong quan trong nhat
-#   (nut Sinh Test Case), checkbox va mau chon trong bang.
-# - NEUTRAL: cac nut phu (mo file, xuat file, chay test...) dung mau
-#   trung tinh de giao dien bot phan tan.
-PRIMARY = "#1F6AA5"
-PRIMARY_HOVER = "#144870"
-NEUTRAL = ("#D9D9D9", "#3B3B3B")
-NEUTRAL_HOVER = ("#C6C6C6", "#4A4A4A")
-NEUTRAL_TEXT = ("#1F1F1F", "#F2F2F2")
+# ─── Adwaita / GNOME HIG colour palette ──────────────────────────────────────
+# Accent: GNOME Blue (light/dark variants follow system).
+# Naming mirrors libadwaita CSS variable semantics so intent is clear.
+PRIMARY          = ("#1C71D8", "#3584E4")   # suggested-action / accent
+PRIMARY_HOVER    = ("#1558A8", "#2A6FC0")
+PRIMARY_TEXT     = "#FFFFFF"
+
+# Secondary buttons: outlined/flat — transparent bg, subtle border.
+SECONDARY        = "transparent"
+SECONDARY_HOVER  = ("#E0E0E0", "#3A3A3A")
+SECONDARY_TEXT   = ("#1C1C1C", "#FFFFFF")
+SECONDARY_BORDER = ("#C0C0C0", "#525252")
+
+# Surfaces
+HEADERBAR_BG     = ("#E4E4E4", "#242424")   # headerbar_bg_color
+SIDEBAR_BG       = ("#EFEFEF", "#2D2D2D")   # sidebar background
+CARD_BG          = ("#FFFFFF", "#313131")   # cards / elevated surfaces
+WINDOW_BG        = ("#FAFAFA", "#242424")
+
+# Semantic
+DESTRUCTIVE      = ("#C01C28", "#E01B24")   # trash / error
+SUCCESS_FG       = ("#1A7F4A", "#2EC27E")   # Pass
+FAIL_FG          = ("#C01C28", "#FF7B7B")   # Fail
+
+# Text
+TEXT_DIM         = ("gray40", "gray65")     # section labels, hints
+
+# Scrollbar
+SB_BG            = ("#B8B8B8", "#4D4D4D")
+SB_TROUGH        = ("#E8E8E8", "#2A2A2A")
+
+# Treeview alternating row (very subtle)
+TREE_ODD_DARK    = "#2E2E2E"
+TREE_ODD_LIGHT   = "#F4F4F4"
+
+# Separator / sash
+SASH_COLOR_DARK  = "#3A3A3A"
+SASH_COLOR_LIGHT = "#D0D0D0"
+
+# Apply the same surfaces to controls created dynamically in parameter cards
+# and dialogs. Keep this local to the UI; the core has no theme dependency.
+for widget, options in {
+    "CTk": {"fg_color": WINDOW_BG},
+    "CTkToplevel": {"fg_color": WINDOW_BG},
+    "CTkFrame": {"fg_color": CARD_BG, "top_fg_color": CARD_BG,
+                 "border_color": SECONDARY_BORDER},
+    "CTkLabel": {"text_color": SECONDARY_TEXT},
+    "CTkEntry": {"fg_color": CARD_BG, "border_color": SECONDARY_BORDER,
+                 "border_width": 1, "text_color": SECONDARY_TEXT},
+    "CTkOptionMenu": {"fg_color": SECONDARY_HOVER,
+                      "button_color": SECONDARY_HOVER,
+                      "button_hover_color": SECONDARY_BORDER,
+                      "text_color": SECONDARY_TEXT},
+    "CTkCheckBox": {"fg_color": PRIMARY, "hover_color": PRIMARY_HOVER,
+                    "border_color": SECONDARY_BORDER, "border_width": 2,
+                    "corner_radius": 4, "text_color": SECONDARY_TEXT,
+                    "checkmark_color": PRIMARY_TEXT},
+    "CTkScrollbar": {"button_color": SB_BG},
+    "CTkTextbox": {"fg_color": CARD_BG, "text_color": SECONDARY_TEXT,
+                   "border_color": SECONDARY_BORDER},
+    "CTkSegmentedButton": {"fg_color": SIDEBAR_BG,
+                           "selected_color": CARD_BG,
+                           "selected_hover_color": SECONDARY_HOVER,
+                           "unselected_color": SIDEBAR_BG,
+                           "unselected_hover_color": SECONDARY_HOVER,
+                           "text_color": SECONDARY_TEXT},
+    "DropdownMenu": {"fg_color": CARD_BG, "hover_color": SECONDARY_HOVER,
+                     "text_color": SECONDARY_TEXT},
+}.items():
+    ctk.ThemeManager.theme[widget].update(options)
 
 _icon_cache: dict = {}
 
@@ -67,19 +128,23 @@ def app_logo(size: int = 34) -> ctk.CTkImage:
 
 
 def section_label(master, text: str) -> ctk.CTkLabel:
-    """Nhan tieu de muc kieu sidebar desktop (chu hoa nho, xam)."""
+    """Nhan tieu de muc kieu GNOME HIG (bold, dimmed — KHONG all-caps)."""
     return ctk.CTkLabel(
-        master, text=text.upper(),
-        font=ctk.CTkFont(size=11, weight="bold"),
-        text_color=("gray38", "gray80"), anchor="w",
+        master, text=text,
+        font=ctk.CTkFont(size=13, weight="bold"),
+        text_color=TEXT_DIM, anchor="w",
     )
 
 
 def icon_button(master, icon_name: str, text: str, command,
                 tip: str | None = None, **kwargs) -> ctk.CTkButton:
-    kwargs.setdefault("fg_color", NEUTRAL)
-    kwargs.setdefault("hover_color", NEUTRAL_HOVER)
-    kwargs.setdefault("text_color", NEUTRAL_TEXT)
+    """Nut bam kieu GNOME HIG secondary: outlined/flat, khong bg mac dinh."""
+    kwargs.setdefault("fg_color", SECONDARY)
+    kwargs.setdefault("hover_color", SECONDARY_HOVER)
+    kwargs.setdefault("text_color", SECONDARY_TEXT)
+    kwargs.setdefault("border_width", 1)
+    kwargs.setdefault("border_color", SECONDARY_BORDER)
+    kwargs.setdefault("corner_radius", 6)
     btn = ctk.CTkButton(master, image=icon(icon_name), text=text,
                         compound="left", anchor="w", command=command, **kwargs)
     if tip:
@@ -89,7 +154,7 @@ def icon_button(master, icon_name: str, text: str, command,
 
 # ----------------------------------------------------------------- Tooltip
 class ToolTip:
-    """Tooltip hien khi di chuot qua widget (NFR-02)."""
+    """Tooltip theo theme sang/toi, chu nho ro rang (NFR-02)."""
 
     def __init__(self, widget: tk.Widget, text: str, delay_ms: int = 500):
         self.widget = widget
@@ -112,10 +177,17 @@ class ToolTip:
         self._tip = tk.Toplevel(self.widget)
         self._tip.wm_overrideredirect(True)
         self._tip.wm_geometry(f"+{x}+{y}")
+        # Adwaita style: nen bien doi theo theme
+        is_dark = ctk.get_appearance_mode() == "Dark"
+        bg_color = "#383838" if is_dark else "#F0F0F0"
+        fg_color = "#EEEEEE" if is_dark else "#1C1C1C"
+        border_color = "#505050" if is_dark else "#C8C8C8"
+        outer = tk.Frame(self._tip, bg=border_color, bd=1)
+        outer.pack()
         tk.Label(
-            self._tip, text=self.text, justify="left",
-            bg="#2b2b2b", fg="white", padx=8, pady=4,
-            font=("TkDefaultFont", 9), wraplength=320,
+            outer, text=self.text, justify="left",
+            bg=bg_color, fg=fg_color, padx=10, pady=5,
+            font=("TkDefaultFont", 9), wraplength=340,
         ).pack()
 
     def _hide(self, _event=None) -> None:
@@ -129,10 +201,12 @@ class ToolTip:
 
 # --------------------------------------------------------------- Param card
 class ParamCard(ctk.CTkFrame):
-    """Mot the tham so trong form dong (FR-1.1, FR-1.2)."""
+    """Mot the tham so trong form dong — kieu Adwaita card (FR-1.1, FR-1.2)."""
 
     def __init__(self, master, on_delete, data: dict | None = None):
-        super().__init__(master, border_width=1, corner_radius=8)
+        super().__init__(master, border_width=1, corner_radius=12,
+                         fg_color=CARD_BG,
+                         border_color=("#D4D4D4", "#3E3E3E"))
         self.on_delete = on_delete
         data = data or {}
         self.title_var = tk.StringVar(value="Tham số")
@@ -148,22 +222,26 @@ class ParamCard(ctk.CTkFrame):
         self.allow_null_var = tk.BooleanVar(value=bool(data.get("allow_null", False)))
 
         header = ctk.CTkFrame(self, fg_color="transparent")
-        header.pack(fill="x", padx=12, pady=(10, 0))
+        header.pack(fill="x", padx=14, pady=(12, 0))
         ctk.CTkLabel(header, textvariable=self.title_var,
-                     font=ctk.CTkFont(weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(size=12, weight="bold")).pack(side="left")
         del_btn = ctk.CTkButton(
             header, image=icon("trash-2", 16), text="", width=32, height=28,
-            fg_color="transparent", hover_color=("#E8C4C4", "#5A2A2A"),
+            fg_color="transparent",
+            hover_color=("#FFDAD6", "#5A2020"),
+            text_color=DESTRUCTIVE,
+            border_width=0,
+            corner_radius=6,
             command=lambda: self.on_delete(self),
         )
         del_btn.pack(side="right")
         ToolTip(del_btn, "Xoá tham số này khỏi hàm")
 
         row = ctk.CTkFrame(self, fg_color="transparent")
-        row.pack(fill="x", padx=12, pady=6)
+        row.pack(fill="x", padx=14, pady=(8, 0))
         ctk.CTkLabel(row, text="Tên", width=34, anchor="w").pack(side="left")
         name_entry = ctk.CTkEntry(row, textvariable=self.name_var, width=150)
-        name_entry.pack(side="left", padx=(0, 12))
+        name_entry.pack(side="left", fill="x", expand=True, padx=(0, 12))
         ToolTip(name_entry, "Tên biến của tham số, phải hợp lệ trong Python "
                             "và không trùng với tham số khác (FR-1.4).")
         self.name_var.trace_add("write", lambda *_: self._refresh_title())
@@ -177,7 +255,7 @@ class ParamCard(ctk.CTkFrame):
                            "enum (tập giá trị cố định) hoặc bool.")
 
         self.config_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.config_frame.pack(fill="x", padx=12, pady=(4, 12))
+        self.config_frame.pack(fill="x", padx=14, pady=(4, 14))
         self._rebuild_config()
         self._refresh_title()
 
@@ -190,17 +268,17 @@ class ParamCard(ctk.CTkFrame):
         ptype = self.type_var.get()
         f = self.config_frame
         if ptype in ("int", "float"):
-            ctk.CTkLabel(f, text="Min", width=34, anchor="w").grid(row=0, column=0, sticky="w")
+            ctk.CTkLabel(f, text="Nhỏ nhất", width=76, anchor="w").grid(row=0, column=0, sticky="w")
             min_entry = ctk.CTkEntry(f, textvariable=self.min_var, width=100)
             min_entry.grid(row=0, column=1, padx=(0, 12))
             ToolTip(min_entry, "Giá trị nhỏ nhất hợp lệ. BVA sinh các điểm "
                                "min-1, min, min+1 (FR-2.2).")
-            ctk.CTkLabel(f, text="Max", width=36, anchor="w").grid(row=0, column=2, sticky="w")
+            ctk.CTkLabel(f, text="Lớn nhất", width=76, anchor="w").grid(row=0, column=2, sticky="w")
             max_entry = ctk.CTkEntry(f, textvariable=self.max_var, width=100)
             max_entry.grid(row=0, column=3, padx=(0, 12))
             ToolTip(max_entry, "Giá trị lớn nhất hợp lệ, phải >= Min (FR-2.2).")
             null_box = ctk.CTkCheckBox(f, text="Cho phép null", variable=self.allow_null_var)
-            null_box.grid(row=0, column=4)
+            null_box.grid(row=1, column=0, columnspan=4, sticky="w", pady=(10, 0))
             ToolTip(null_box, "Cho phép None là hợp lệ; nếu tắt, BTG sinh "
                               "case None thuộc vùng không hợp lệ.")
         elif ptype == "string":
@@ -213,14 +291,14 @@ class ParamCard(ctk.CTkFrame):
             maxlen_entry.grid(row=0, column=3, padx=(0, 12))
             ToolTip(maxlen_entry, "Độ dài chuỗi tối đa hợp lệ, phải >= Min length.")
             empty_box = ctk.CTkCheckBox(f, text="Cho phép rỗng", variable=self.allow_empty_var)
-            empty_box.grid(row=0, column=4, padx=(0, 8))
+            empty_box.grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
             ToolTip(empty_box, "Cho phép chuỗi rỗng '' là hợp lệ.")
             null_box = ctk.CTkCheckBox(f, text="Cho phép null", variable=self.allow_null_var)
-            null_box.grid(row=0, column=5)
+            null_box.grid(row=2, column=2, columnspan=2, sticky="w", pady=(10, 0))
             ToolTip(null_box, "Cho phép None là hợp lệ.")
             ctk.CTkLabel(f, text="Regex", width=70, anchor="w").grid(row=1, column=0, sticky="w", pady=(6, 0))
             regex_entry = ctk.CTkEntry(f, textvariable=self.regex_var, width=320)
-            regex_entry.grid(row=1, column=1, columnspan=5, sticky="w", pady=(6, 0))
+            regex_entry.grid(row=1, column=1, columnspan=3, sticky="ew", pady=(6, 0))
             ToolTip(regex_entry, "Tuỳ chọn: mẫu regex chuỗi hợp lệ phải khớp, "
                                  "VD ^\\d{3}$ cho chuỗi 3 chữ số (FR-1.4).")
         elif ptype == "enum":
@@ -234,7 +312,7 @@ class ParamCard(ctk.CTkFrame):
             ToolTip(null_box, "Cho phép None là hợp lệ.")
         else:  # bool
             ctk.CTkLabel(f, text="Bool gồm 2 giá trị True / False.",
-                         text_color=("gray45", "gray75")).grid(row=0, column=0, sticky="w")
+                         text_color=TEXT_DIM).grid(row=0, column=0, sticky="w")
         self._refresh_title()
 
     # ------------------------------------------------------------- collect
@@ -275,15 +353,22 @@ class BTGApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("BTG — Black-box Test Generator")
-        self.geometry("1340x860")
+        self.geometry("1280x820")
         self.minsize(1080, 660)
-        self.dark_mode = True
+        import tkinter.font as tkfont
+        families = set(tkfont.families(self))
+        self.ui_font = next((f for f in ("Adwaita Sans", "Cantarell", "Noto Sans", "DejaVu Sans")
+                             if f in families), tkfont.nametofont("TkDefaultFont").actual("family"))
+        self.mono_font = next((f for f in ("Adwaita Mono", "DejaVu Sans Mono", "Consolas")
+                               if f in families), tkfont.nametofont("TkFixedFont").actual("family"))
+        ctk.ThemeManager.theme["CTkFont"]["family"] = self.ui_font
+        self.dark_mode = ctk.get_appearance_mode() == "Dark"
         self._set_window_icon()
 
         self.param_cards: list[ParamCard] = []
         self.spec: FunctionSpec | None = None
         self.cases: list = []
-        self.results: list | None = None  # ket qua Run Tests gan nhat
+        self.results: list | None = None  # ket qua Chạy test gan nhat
         self.gt_code_str: str = ""        # code ham tham chieu (luu trong bien,
         self.gt_source: str = ""          # khong con o text tren sidebar)
         self.imported_specs: list[FunctionSpec] = []
@@ -317,36 +402,39 @@ class BTGApp(ctk.CTk):
 
     # ------------------------------------------------------------- header
     def _build_header(self) -> None:
-        header = ctk.CTkFrame(self, height=56, corner_radius=0,
-                              fg_color=("#E7E7E7", "#1B1B1B"))
+        header = ctk.CTkFrame(self, height=54, corner_radius=0,
+                              fg_color=HEADERBAR_BG)
         header.grid(row=0, column=0, sticky="ew")
         header.grid_propagate(False)
+        header.grid_columnconfigure((0, 2), weight=1, uniform="header")
+        header.grid_columnconfigure(1, weight=0)
+        icon_button(header, "folder", "Mở file Python", self._load_py_file,
+                    tip="Mở file Python và trích xuất các hàm.",
+                    border_width=0, height=36, width=164).grid(
+                        row=0, column=0, sticky="w", padx=12, pady=9)
+        title = ctk.CTkFrame(header, fg_color="transparent")
+        title.grid(row=0, column=1)
         try:
-            logo = ctk.CTkLabel(header, image=app_logo(40), text="")
+            logo = app_logo(30)
         except OSError:
-            logo = ctk.CTkLabel(header, image=icon("zap", 24), text="")
-        logo.pack(side="left", padx=(14, 8))
-
-        gen_btn = ctk.CTkButton(
-            header, image=icon("zap"), text="Sinh Test Case", compound="left",
-            width=160, height=36, fg_color=PRIMARY, hover_color=PRIMARY_HOVER,
-            text_color="#FFFFFF",
-            font=ctk.CTkFont(weight="bold"), command=self._generate)
-        gen_btn.pack(side="right", padx=(8, 14))
-        ToolTip(gen_btn, "Sinh test case theo các kỹ thuật đã chọn. "
-                         "Hàm dưới 5 tham số sinh trong < 2 giây (NFR-01).")
-        self.theme_btn = ctk.CTkButton(
-            header, image=icon("sun"), text="", width=40, height=36,
-            fg_color="transparent", hover_color=("gray82", "gray25"),
-            command=self._toggle_theme)
-        self.theme_btn.pack(side="right")
-        ToolTip(self.theme_btn, "Chuyển giao diện Sáng / Tối")
+            logo = icon("zap", 24)
+        ctk.CTkLabel(title, image=logo, text="").pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(title, text="BTG · Kiểm thử hộp đen",
+                     font=ctk.CTkFont(size=14, weight="bold")).pack(side="left")
+        self.theme_btn = icon_button(
+            header, "sun" if self.dark_mode else "moon", "", self._toggle_theme,
+            tip="Chuyển giao diện sáng / tối", width=36, height=36,
+            border_width=0)
+        self.theme_btn.grid(row=0, column=2, sticky="e", padx=12)
+        ctk.CTkFrame(header, height=1, corner_radius=0,
+                      fg_color=SECONDARY_BORDER).grid(
+                          row=1, column=0, columnspan=3, sticky="ew")
 
     def _toggle_theme(self) -> None:
         self.dark_mode = not self.dark_mode
         ctk.set_appearance_mode("dark" if self.dark_mode else "light")
         self.theme_btn.configure(image=icon("sun" if self.dark_mode else "moon"))
-        self.paned.configure(bg="#242424" if self.dark_mode else "#EBEBEB")
+        self.paned.configure(bg=SASH_COLOR_DARK if self.dark_mode else SASH_COLOR_LIGHT)
         self._style_trees()
 
     # --------------------------------------------------------------- body
@@ -360,7 +448,7 @@ class BTGApp(ctk.CTk):
 
     def _build_sidebar(self, body) -> None:
         sb = ctk.CTkScrollableFrame(body, width=272, corner_radius=0,
-                                    fg_color=("#F0F0F0", "#212121"),
+                                    fg_color=SIDEBAR_BG,
                                     scrollbar_button_color=("gray70", "gray35"))
         sb.grid(row=0, column=0, sticky="nsew")
 
@@ -371,12 +459,11 @@ class BTGApp(ctk.CTk):
                     height=34).pack(fill="x", padx=14)
         ctk.CTkLabel(sb, text="Hàm trong file", anchor="w",
                      font=ctk.CTkFont(size=11),
-                     text_color=("gray38", "gray80")).pack(anchor="w", padx=14, pady=(10, 2))
+                     text_color=TEXT_DIM).pack(anchor="w", padx=14, pady=(10, 2))
         self.imported_name_var = tk.StringVar(value="(chưa có hàm)")
         self.imported_menu = ctk.CTkOptionMenu(
             sb, values=["(chưa có hàm)"], variable=self.imported_name_var,
-            height=34, fg_color=NEUTRAL, button_color=("#BFBFBF", "#2E2E2E"),
-            button_hover_color=NEUTRAL_HOVER, text_color=NEUTRAL_TEXT,
+            height=34,
             state="disabled")
         self.imported_menu.pack(fill="x", padx=14)
         self.apply_btn = icon_button(
@@ -389,17 +476,17 @@ class BTGApp(ctk.CTk):
         self.use_ep_var = tk.BooleanVar(value=True)
         self.use_bva_var = tk.BooleanVar(value=True)
         self.use_pairwise_var = tk.BooleanVar(value=False)
-        ep_box = ctk.CTkCheckBox(sb, text="Equivalence Partitioning (EP)",
+        ep_box = ctk.CTkCheckBox(sb, text="Phân vùng tương đương (EP)",
                                  variable=self.use_ep_var)
         ep_box.pack(anchor="w", padx=14, pady=3)
         ToolTip(ep_box, "Chia miền dữ liệu thành các vùng tương đương, "
                         "mỗi vùng lấy 1 giá trị đại diện (FR-2.1).")
-        bva_box = ctk.CTkCheckBox(sb, text="Boundary Value Analysis (BVA)",
+        bva_box = ctk.CTkCheckBox(sb, text="Phân tích giá trị biên (BVA)",
                                   variable=self.use_bva_var)
         bva_box.pack(anchor="w", padx=14, pady=3)
         ToolTip(bva_box, "Sinh các điểm sát biên: min-1, min, min+1, "
                          "max-1, max, max+1 (FR-2.2).")
-        pw_box = ctk.CTkCheckBox(sb, text="Pairwise", variable=self.use_pairwise_var)
+        pw_box = ctk.CTkCheckBox(sb, text="Kết hợp từng cặp (Pairwise)", variable=self.use_pairwise_var)
         pw_box.pack(anchor="w", padx=14, pady=3)
         ToolTip(pw_box, "Bao phủ mọi cặp giá trị giữa các tham số — "
                         "khuyên dùng khi hàm có > 3 tham số (FR-2.3).")
@@ -408,7 +495,7 @@ class BTGApp(ctk.CTk):
         icon_button(sb, "code", "Mở file hàm tham chiếu", self._load_gt_file,
                     tip="Nạp code hàm tham chiếu (bản cài đặt chuẩn) từ một "
                         "file .py. Hàm này dùng để tự điền Expected Output "
-                        "và chạy Run Tests (FR-3.2).",
+                        "và chạy Chạy test (FR-3.2).",
                     height=34).pack(fill="x", padx=14)
         # Trang thai gon: sidebar chi hien da nap hay chua + nut mo popup
         # xem/sua code, thay cho o text to chiem cho truoc day.
@@ -418,7 +505,7 @@ class BTGApp(ctk.CTk):
         self.gt_status_icon.pack(side="left")
         self.gt_status_var = tk.StringVar(value="Chưa có hàm tham chiếu")
         ctk.CTkLabel(gt_status, textvariable=self.gt_status_var, anchor="w",
-                     text_color=("gray38", "gray80"), wraplength=230,
+                     text_color=TEXT_DIM, wraplength=230,
                      justify="left").pack(side="left", padx=(6, 0))
         icon_button(sb, "edit-2", "Xem / nhập code", self._open_gt_editor,
                     tip="Mở cửa sổ xem và sửa code hàm tham chiếu, "
@@ -427,31 +514,44 @@ class BTGApp(ctk.CTk):
 
     def _build_main(self, body) -> None:
         main = ctk.CTkFrame(body, fg_color="transparent")
-        main.grid(row=0, column=1, sticky="nsew", padx=(12, 12), pady=(10, 6))
-        main.grid_rowconfigure(2, weight=1)
+        main.grid(row=0, column=1, sticky="nsew", padx=18, pady=(16, 10))
+        main.grid_rowconfigure(3, weight=1)
         main.grid_columnconfigure(0, weight=1)
 
+        heading = ctk.CTkFrame(main, fg_color="transparent")
+        heading.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        ctk.CTkLabel(heading, text="Cấu hình kiểm thử",
+                     font=ctk.CTkFont(size=20, weight="bold")).pack(side="left")
+        icon_button(heading, "zap", "Sinh test case", self._generate,
+                    tip="Sinh test theo các kỹ thuật đã chọn.",
+                    fg_color=PRIMARY, hover_color=PRIMARY_HOVER,
+                    text_color=PRIMARY_TEXT, border_width=0,
+                    width=160, height=36).pack(side="right")
         toolbar = ctk.CTkFrame(main, fg_color="transparent")
-        toolbar.grid(row=0, column=0, sticky="ew")
+        toolbar.grid(row=1, column=0, sticky="ew", pady=(0, 10))
         ctk.CTkLabel(toolbar, text="Hàm", width=36, anchor="w").pack(side="left")
         self.func_name_var = tk.StringVar(value="my_function")
         func_entry = ctk.CTkEntry(toolbar, textvariable=self.func_name_var, width=230)
         func_entry.pack(side="left")
         ToolTip(func_entry, "Tên hàm cần sinh test case — phải trùng tên hàm "
-                            "trong hàm tham chiếu nếu muốn Run Tests.")
+                            "trong hàm tham chiếu nếu muốn Chạy test.")
         icon_button(toolbar, "plus", "Thêm tham số", lambda: self.add_param(),
                     tip="Thêm một tham số mới vào hàm (FR-1.1).",
                     width=140, height=32).pack(side="left", padx=(12, 0))
 
-        section_label(main, "Tham số").grid(row=1, column=0, sticky="w", pady=(10, 4))
+        self.param_count_var = tk.StringVar(value="Tham số · 0")
+        ctk.CTkLabel(main, textvariable=self.param_count_var,
+                     font=ctk.CTkFont(size=13, weight="bold"),
+                     text_color=TEXT_DIM).grid(row=2, column=0, sticky="w", pady=(0, 6))
 
         # Thanh chia keo duoc (splitter) giua khung tham so va khung ket
         # qua: nguoi dung tu keo de uu tien phan minh dang lam.
         self.paned = tk.PanedWindow(main, orient="vertical", sashwidth=5,
-                                    bd=0, bg="#242424", opaqueresize=True)
-        self.paned.grid(row=2, column=0, sticky="nsew")
-        top = ctk.CTkFrame(self.paned, fg_color="transparent")
-        bottom = ctk.CTkFrame(self.paned, fg_color="transparent")
+                                    bd=0, bg=SASH_COLOR_DARK if self.dark_mode else SASH_COLOR_LIGHT,
+                                    opaqueresize=True, sashcursor="sb_v_double_arrow")
+        self.paned.grid(row=3, column=0, sticky="nsew")
+        top = ctk.CTkFrame(self.paned, fg_color=WINDOW_BG, corner_radius=0)
+        bottom = ctk.CTkFrame(self.paned, fg_color=WINDOW_BG, corner_radius=0)
         self.paned.add(top, minsize=105, stretch="always")
         self.paned.add(bottom, minsize=230, stretch="always")
         self.after(200, self._place_sash)
@@ -464,13 +564,13 @@ class BTGApp(ctk.CTk):
         self.btn_csv = icon_button(
             actions, "file-text", "CSV", self._export_csv,
             tip="Xuất bảng test case ra file CSV (FR-4.1). "
-                "Nếu đã Run Tests, file kèm thêm cột Actual + Status.",
+                "Nếu đã Chạy test, file kèm thêm cột Actual + Status.",
             width=96, height=32, state="disabled")
         self.btn_csv.pack(side="left", padx=(0, 8))
         self.btn_excel = icon_button(
             actions, "grid", "Excel", self._export_excel,
             tip="Xuất bảng test case ra file Excel .xlsx (FR-4.1). "
-                "Nếu đã Run Tests, file kèm thêm cột Actual + Status.",
+                "Nếu đã Chạy test, file kèm thêm cột Actual + Status.",
             width=96, height=32, state="disabled")
         self.btn_excel.pack(side="left", padx=(0, 8))
         self.btn_pytest = icon_button(
@@ -479,19 +579,25 @@ class BTGApp(ctk.CTk):
             width=104, height=32, state="disabled")
         self.btn_pytest.pack(side="left", padx=(0, 8))
         self.btn_run = icon_button(
-            actions, "play", "Run Tests", self._run_tests,
+            actions, "play", "Chạy test", self._run_tests,
             tip="Chạy toàn bộ test case với hàm tham chiếu, "
                 "hiển thị tỉ lệ Pass/Fail (FR-4.3).",
             width=118, height=32, state="disabled")
         self.btn_run.pack(side="left")
-        self.summary_var = tk.StringVar(value="")
-        ctk.CTkLabel(actions, textvariable=self.summary_var,
-                     font=ctk.CTkFont(weight="bold")).pack(side="right")
+        self.summary_var = tk.StringVar(value="Chưa có kết quả chạy")
+        ctk.CTkLabel(bottom, textvariable=self.summary_var, anchor="w",
+                     text_color=TEXT_DIM,
+                     font=ctk.CTkFont(size=12)).pack(fill="x", padx=2)
+        self.case_count_var = tk.StringVar(value="0 test case")
+        ctk.CTkLabel(actions, textvariable=self.case_count_var,
+                     text_color=TEXT_DIM).pack(side="right")
 
-        tabs = ctk.CTkTabview(bottom)
+        self.tabs = tabs = ctk.CTkTabview(bottom, fg_color=CARD_BG,
+                                             border_width=1, border_color=SECONDARY_BORDER,
+                                             corner_radius=10)
         tabs.pack(fill="both", expand=True)
-        cases_tab = tabs.add("Test Cases")
-        run_tab = tabs.add("Kết quả Run Tests")
+        cases_tab = tabs.add("Test case")
+        run_tab = tabs.add("Kết quả chạy")
         self.cases_tree = self._make_tree(
             cases_tab,
             ("id", "inputs", "expected", "exception", "technique", "reasoning"),
@@ -510,21 +616,26 @@ class BTGApp(ctk.CTk):
             [76, 320, 180, 180, 90],
         )
 
-        # Goi y khi bang con trong (thay vi mot vung den truoc day)
-        self.cases_hint = ctk.CTkLabel(
-            cases_tab, justify="center",
-            text_color=("gray38", "gray80"),
-            text="Chưa có test case nào.\n"
-                 "Hãy cấu hình tham số, chọn kỹ thuật ở sidebar\n"
-                 "rồi bấm 'Sinh Test Case'.")
-        self.cases_hint.place(relx=0.5, rely=0.42, anchor="center")
-        self.run_hint = ctk.CTkLabel(
-            run_tab, justify="center",
-            text_color=("gray38", "gray80"),
-            text="Chưa có kết quả chạy test.\n"
-                 "Nạp hàm tham chiếu rồi bấm 'Run Tests'\n"
-                 "để xem tỉ lệ Pass/Fail tại đây.")
-        self.run_hint.place(relx=0.5, rely=0.42, anchor="center")
+        self.cases_hint = self._placeholder(
+            cases_tab, "sliders", "Sẵn sàng tạo bộ kiểm thử",
+            "Cấu hình tham số và chọn kỹ thuật bên trái.\n"
+            "Bấm Sinh test case để bắt đầu.")
+        self.run_hint = self._placeholder(
+            run_tab, "play", "Chưa có kết quả chạy",
+            "Nạp hàm tham chiếu, sinh test case rồi bấm Chạy test.\n"
+            "Kết quả Pass / Fail sẽ xuất hiện tại đây.")
+
+    def _placeholder(self, parent, icon_name: str, title: str, description: str):
+        panel = ctk.CTkFrame(parent, fg_color=CARD_BG, corner_radius=0)
+        content = ctk.CTkFrame(panel, fg_color="transparent")
+        content.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(content, image=icon(icon_name, 28), text="").pack(pady=(8, 4))
+        ctk.CTkLabel(content, text=title,
+                     font=ctk.CTkFont(size=16, weight="bold")).pack()
+        ctk.CTkLabel(content, text=description, justify="center",
+                     text_color=TEXT_DIM, font=ctk.CTkFont(size=12)).pack(padx=16, pady=(4, 8))
+        panel.place(relx=0, rely=0, relwidth=1, relheight=1)
+        return panel
 
     def _place_sash(self) -> None:
         try:
@@ -535,6 +646,7 @@ class BTGApp(ctk.CTk):
             pass
 
     def _sync_output_buttons(self) -> None:
+        self.case_count_var.set(f"{len(self.cases)} test case")
         state = "normal" if self.cases else "disabled"
         for btn in (self.btn_csv, self.btn_excel, self.btn_pytest,
                     self.btn_run):
@@ -542,7 +654,7 @@ class BTGApp(ctk.CTk):
         if self.cases:
             self.cases_hint.place_forget()
         else:
-            self.cases_hint.place(relx=0.5, rely=0.42, anchor="center")
+            self.cases_hint.place(relx=0, rely=0, relwidth=1, relheight=1)
 
     def _make_tree(self, parent, cols, headings, widths) -> ttk.Treeview:
         wrap = ctk.CTkFrame(parent, fg_color="transparent")
@@ -568,33 +680,34 @@ class BTGApp(ctk.CTk):
         except tk.TclError:
             pass
         if self.dark_mode:
-            bg, fg, head_bg, sel = "#2B2B2B", "#FFFFFF", "#3A3A3A", PRIMARY
-            odd_bg = "#333333"
+            bg, fg, head_bg, sel = "#2B2B2B", "#FFFFFF", "#383838", PRIMARY[1]
+            odd_bg = TREE_ODD_DARK
             sb_bg, sb_trough = "#4D4D4D", "#242424"
-            pass_fg, fail_fg = "#4ADE80", "#F87171"
+            pass_fg, fail_fg = SUCCESS_FG[1], FAIL_FG[1]
         else:
-            bg, fg, head_bg, sel = "#FFFFFF", "#242424", "#E5E5E5", PRIMARY
-            odd_bg = "#F4F4F4"
+            bg, fg, head_bg, sel = "#FFFFFF", "#242424", "#F2F2F2", PRIMARY[0]
+            odd_bg = TREE_ODD_LIGHT
             sb_bg, sb_trough = "#B8B8B8", "#EFEFEF"
-            pass_fg, fail_fg = "#1F7A3D", "#B3261E"
-        # Font monospace de doc JSON de hon; dong cao, thoang
-        import tkinter.font as tkfont
-        families = set(tkfont.families())
-        mono = next((f for f in ("Consolas", "DejaVu Sans Mono",
-                                 "Cascadia Mono", "Courier New")
-                     if f in families), "TkFixedFont")
+            pass_fg, fail_fg = SUCCESS_FG[0], FAIL_FG[0]
         style.configure("Treeview", background=bg, foreground=fg,
-                        fieldbackground=bg, rowheight=28, borderwidth=0,
+                        fieldbackground=bg, rowheight=34, borderwidth=0,
                         bordercolor=bg, lightcolor=bg, darkcolor=bg,
-                        font=(mono, 11))
+                        font=(self.mono_font, 10))
         style.configure("Treeview.Heading", background=head_bg, foreground=fg,
                         relief="flat", borderwidth=0,
-                        font=("TkDefaultFont", 11, "bold"))
+                        font=(self.ui_font, 10, "bold"))
+        style.map("Treeview.Heading", background=[("active", head_bg)])
         style.map("Treeview", background=[("selected", sel)],
                   foreground=[("selected", "#FFFFFF")])
         # Thanh cuon theo theme thay vi mac dinh cua OS
         for orient in ("Vertical", "Horizontal"):
-            style.configure(f"{orient}.TScrollbar", background=sb_bg,
+            style.layout(f"{orient}.TScrollbar", [
+                (f"{orient}.Scrollbar.trough", {"sticky": "nswe", "children": [
+                    (f"{orient}.Scrollbar.thumb", {"sticky": "nswe", "expand": "1"})
+                ]})
+            ])
+            style.configure(f"{orient}.TScrollbar", background=sb_bg, width=10,
+                            arrowsize=10,
                             troughcolor=sb_trough, borderwidth=0,
                             bordercolor=sb_trough, lightcolor=sb_bg,
                             darkcolor=sb_bg, arrowcolor=fg)
@@ -607,9 +720,9 @@ class BTGApp(ctk.CTk):
 
     def _build_statusbar(self) -> None:
         self.status_var = tk.StringVar(
-            value="Sẵn sàng — cấu hình tham số rồi bấm 'Sinh Test Case'.")
+            value="Sẵn sàng — cấu hình tham số rồi bấm 'Sinh test case'.")
         bar = ctk.CTkFrame(self, height=26, corner_radius=0,
-                           fg_color=("#E7E7E7", "#1B1B1B"))
+                           fg_color=HEADERBAR_BG)
         bar.grid(row=2, column=0, sticky="ew")
         bar.grid_propagate(False)
         ctk.CTkLabel(bar, textvariable=self.status_var, anchor="w",
@@ -625,6 +738,7 @@ class BTGApp(ctk.CTk):
                          data=data)
         card.pack(fill="x", padx=6, pady=6)
         self.param_cards.append(card)
+        self.param_count_var.set(f"Tham số · {len(self.param_cards)}")
 
     def _delete_param(self, card: ParamCard) -> None:
         if len(self.param_cards) <= 1:
@@ -632,6 +746,7 @@ class BTGApp(ctk.CTk):
             return
         self.param_cards.remove(card)
         card.destroy()
+        self.param_count_var.set(f"Tham số · {len(self.param_cards)}")
 
     def _clear_params(self) -> None:
         for card in self.param_cards:
@@ -734,16 +849,16 @@ class BTGApp(ctk.CTk):
     def _open_gt_editor(self) -> None:
         """Popup xem / sua / dan code ham tham chieu."""
         win = ctk.CTkToplevel(self)
-        win.title("Hàm tham chiếu — code bản cài đặt chuẩn")
+        win.title("Hàm tham chiếu")
         win.geometry("760x540")
         win.minsize(560, 400)
         win.transient(self)
         ctk.CTkLabel(
-            win, anchor="w", text_color=("gray38", "gray80"),
+            win, anchor="w", text_color=TEXT_DIM, wraplength=510, justify="left",
             text="Code hàm chuẩn, cùng tên với hàm đang cấu hình. BTG chạy "
-                 "hàm này để tự điền Expected Output và Run Tests.",
+                 "hàm này để tự điền Expected Output và Chạy test.",
         ).pack(fill="x", padx=14, pady=(12, 6))
-        text = ctk.CTkTextbox(win, font=ctk.CTkFont(family="Consolas", size=12))
+        text = ctk.CTkTextbox(win, font=ctk.CTkFont(family=self.mono_font, size=13))
         text.pack(fill="both", expand=True, padx=14)
         text.insert("1.0", self.gt_code_str)
         ToolTip(text, "Dán code trực tiếp vào đây hoặc sửa code đã nạp, "
@@ -763,7 +878,9 @@ class BTGApp(ctk.CTk):
 
         icon_button(btns, "check-circle", "Lưu", save,
                     tip="Lưu code và đóng cửa sổ.",
-                    width=100, height=32).pack(side="left")
+                    width=100, height=34, fg_color=PRIMARY,
+                    hover_color=PRIMARY_HOVER, text_color=PRIMARY_TEXT,
+                    border_width=0).pack(side="right", padx=(8, 0))
         icon_button(btns, "trash-2", "Xoá trắng", clear,
                     tip="Xoá toàn bộ code trong ô (chưa lưu cho đến khi bấm Lưu).",
                     width=110, height=32).pack(side="left", padx=(8, 0))
@@ -799,7 +916,7 @@ class BTGApp(ctk.CTk):
                 "BTG — Chưa chọn kỹ thuật",
                 "Bạn chưa chọn kỹ thuật sinh test nào.\n"
                 "Hãy tick ít nhất 1 kỹ thuật (EP, BVA hoặc Pairwise) "
-                "ở sidebar bên trái rồi bấm Sinh Test Case lại.")
+                "ở sidebar bên trái rồi bấm Sinh test case lại.")
             return
         try:
             cases = generate_test_cases(
@@ -822,9 +939,9 @@ class BTGApp(ctk.CTk):
         self.spec, self.cases = spec, cases
         self.results = None  # case moi -> ket qua chay cu khong con hop le
         self.run_tree.delete(*self.run_tree.get_children())
-        self.run_hint.place(relx=0.5, rely=0.42, anchor="center")
+        self.run_hint.place(relx=0, rely=0, relwidth=1, relheight=1)
         self._fill_cases_tree()
-        self.summary_var.set("")
+        self.summary_var.set("Chưa có kết quả chạy")
         self._set_status(f"Đã sinh {len(cases)} test case cho hàm "
                          f"'{spec.name}'.{note}")
 
@@ -883,17 +1000,17 @@ class BTGApp(ctk.CTk):
             case.expected_exception = raw or None
             if raw:
                 case.expected_output = None
-        self.results = None  # expected doi -> phai Run Tests lai
+        self.results = None  # expected doi -> phai Chạy test lai
         self.run_tree.delete(*self.run_tree.get_children())
-        self.run_hint.place(relx=0.5, rely=0.42, anchor="center")
-        self.summary_var.set("")
+        self.run_hint.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.summary_var.set("Chưa có kết quả chạy")
         self._fill_cases_tree()
         self._set_status(f"Đã cập nhật kết quả mong đợi cho {case.test_id}.")
 
     # ------------------------------------------------------------- export
     def _require_cases(self) -> bool:
         if not self.cases or self.spec is None:
-            messagebox.showinfo("BTG", "Hãy bấm 'Sinh Test Case' trước.")
+            messagebox.showinfo("BTG", "Hãy bấm 'Sinh test case' trước.")
             return False
         return True
 
@@ -971,7 +1088,7 @@ class BTGApp(ctk.CTk):
                 tags=tags,
             )
         self.run_hint.place_forget()
-        self._set_status("Đã chạy xong — xem tab 'Kết quả Run Tests'.")
+        self._set_status("Đã chạy xong — xem tab Kết quả chạy.")
 
 
 def main() -> None:
