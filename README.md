@@ -5,7 +5,9 @@
 Phần mềm **sinh Test Case tự động bằng phương pháp Hộp đen (Black-box)** cho các hàm Python,
 theo tài liệu SRS của dự án.
 
-Áp dụng 3 kỹ thuật:
+- **Thành viên:** Phạm Lê Đình An, Nguyễn Bá Thiện, Đặng Đắc Tú, Hà Lê Quang Minh
+  **demo video** : https://drive.google.com/file/d/1oSoFmBX2IVFwnZsDEPuwtGcXzKQ-G67F/view?usp=sharing
+  Áp dụng 3 kỹ thuật:
 
 - **Equivalence Partitioning (EP)** — Phân vùng tương đương
 - **Boundary Value Analysis (BVA)** — Phân tích giá trị biên: `min-1, min, min+1, max-1, max, max+1`
@@ -15,19 +17,19 @@ Kiểu dữ liệu hỗ trợ: `int`, `float`, `string` (length, regex), `enum`,
 
 ## Tính năng (theo SRS)
 
-| Mã | Tính năng |
-|---|---|
-| FR-1.1 / 1.2 | Form động nhập tên hàm, thêm/bớt tham số, cấu hình min/max, length, regex, enum, allow_null... |
-| FR-1.3 | Upload file `.py` — tự trích xuất tên hàm, tham số, type hint (kể cả `Literal[...]` → enum) bằng AST |
-| FR-1.4 | Validation: báo lỗi khi `min > max`, regex sai, trùng tên tham số |
-| FR-2.1 | EP: case hợp lệ + case không hợp lệ theo *Single Fault Assumption* |
-| FR-2.2 | BVA cho số và độ dài chuỗi |
-| FR-2.3 | Pairwise cho hàm nhiều tham số (> 3) |
-| FR-2.4 | Gán nhãn lý do cho từng case (VD `[BVA] age_Min_Minus_1`) + khử trùng lặp |
+| Mã           | Tính năng                                                                                                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-1.1 / 1.2 | Form động nhập tên hàm, thêm/bớt tham số, cấu hình min/max, length, regex, enum, allow_null...                                                                                                                                                    |
+| FR-1.3       | Upload file `.py` — tự trích xuất tên hàm, tham số, type hint (kể cả `Literal[...]` → enum) bằng AST                                                                                                                                              |
+| FR-1.4       | Validation: báo lỗi khi `min > max`, regex sai, trùng tên tham số                                                                                                                                                                                 |
+| FR-2.1       | EP: case hợp lệ + case không hợp lệ theo _Single Fault Assumption_                                                                                                                                                                                |
+| FR-2.2       | BVA cho số và độ dài chuỗi                                                                                                                                                                                                                        |
+| FR-2.3       | Pairwise cho hàm nhiều tham số (> 3)                                                                                                                                                                                                              |
+| FR-2.4       | Gán nhãn lý do cho từng case (VD `[BVA] age_Min_Minus_1`) + khử trùng lặp                                                                                                                                                                         |
 | FR-3.1 / 3.2 | Hàm tham chiếu (Ground Truth / Oracle trong SRS): nhấp đúp vào từng test case để tự cấu hình Expected Output / Exception, hoặc đính kèm hàm tham chiếu — bản cài đặt chuẩn của hàm, dán code hoặc nạp từ file .py riêng — để tự điền kết quả đúng |
-| FR-4.1 | Xuất bảng Test Case ra **Excel (.xlsx)** / **CSV**; sau khi Run Tests, file xuất kèm thêm cột Actual Output / Actual Exception / Status thành báo cáo test hoàn chỉnh |
-| FR-4.2 | Xuất file **`test_generated.py`** dùng `@pytest.mark.parametrize` — chạy được ngay |
-| FR-4.3 | Nút **Run Tests** trên UI, hiển thị tỉ lệ Pass/Fail |
+| FR-4.1       | Xuất bảng Test Case ra **Excel (.xlsx)** / **CSV**; sau khi Run Tests, file xuất kèm thêm cột Actual Output / Actual Exception / Status thành báo cáo test hoàn chỉnh                                                                             |
+| FR-4.2       | Xuất file **`test_generated.py`** dùng `@pytest.mark.parametrize` — chạy được ngay                                                                                                                                                                |
+| FR-4.3       | Nút **Run Tests** trên UI, hiển thị tỉ lệ Pass/Fail                                                                                                                                                                                               |
 
 Hiệu năng (NFR-01): sinh 38 test case cho hàm 4 tham số trong ~0.003 giây (yêu cầu < 2 giây).
 
@@ -64,7 +66,7 @@ python app.py
 ```
 
 Trên giao diện: di chuột qua các ô nhập/nút bấm để xem tooltip hướng dẫn
-(NFR-02); nhấp đúp vào cột *Expected Output* / *Expected Exception* trong
+(NFR-02); nhấp đúp vào cột _Expected Output_ / _Expected Exception_ trong
 bảng kết quả để tự sửa kết quả mong đợi cho từng test case (FR-3.1).
 
 ## Chạy thử không cần giao diện (demo)
