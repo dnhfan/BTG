@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+  <title id="title">Biểu đồ 4.2. Thời gian sinh test case theo số tham số</title>
+  <desc id="desc">F1 đến F4 có lần lượt 1, 2, 4, 5 tham số; thời gian trung vị lần lượt 0.000013, 0.000445, 0.001413, 0.007074 giây. Đường ngưỡng là 2 giây.</desc>
+  <rect width="900" height="560" fill="#fff"/>
+  <text x="450" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="21" font-weight="bold" fill="#222">Biểu đồ 4.2. Thời gian sinh test case theo số tham số</text>
+  <text x="450" y="59" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#555">Trung vị 1.001 lần đo · chỉ tính generate_test_cases</text>
+
+  <!-- Main plot: full 0–2.2 s scale, showing the 2-second requirement threshold. -->
+  <text x="64" y="95" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#444">Toàn thang đo (0–2,2 s)</text>
+  <line x1="100" y1="115" x2="100" y2="340" stroke="#333" stroke-width="1.5"/>
+  <line x1="100" y1="340" x2="825" y2="340" stroke="#333" stroke-width="1.5"/>
+  <line x1="100" y1="135.45" x2="825" y2="135.45" stroke="#d62728" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="820" y="128" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#c21f30">Ngưỡng 2 s</text>
+  <line x1="100" y1="237.73" x2="825" y2="237.73" stroke="#ddd"/>
+  <line x1="100" y1="340" x2="825" y2="340" stroke="#ddd"/>
+  <text x="88" y="120" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#444">2,2</text>
+  <text x="88" y="141" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#444">2,0</text>
+  <text x="88" y="242" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#444">1,0</text>
+  <text x="88" y="344" text-anchor="end" font-family="Arial, sans-serif" font-size="12" fill="#444">0</text>
+  <text x="28" y="225" transform="rotate(-90 28 225)" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#333">Thời gian (giây)</text>
+  <polyline points="160,339.999 350,339.954 540,339.855 730,339.277" fill="none" stroke="#2463a6" stroke-width="2.5"/>
+  <g fill="#2463a6" stroke="#fff" stroke-width="1.5">
+    <circle cx="160" cy="339.999" r="5"/><circle cx="350" cy="339.954" r="5"/><circle cx="540" cy="339.855" r="5"/><circle cx="730" cy="339.277" r="5"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="12" fill="#174a80" text-anchor="middle">
+    <text x="160" y="319">0,000013 s · F1</text>
+    <text x="350" y="300">0,000445 s · F2</text>
+    <text x="540" y="319">0,001413 s · F3</text>
+    <text x="730" y="300">0,007074 s · F4</text>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="12" fill="#444" text-anchor="middle">
+    <text x="160" y="361">1 tham số</text><text x="350" y="361">2 tham số</text>
+    <text x="540" y="361">4 tham số</text><text x="730" y="361">5 tham số</text>
+  </g>
+
+  <!-- Inset zoom so the small measured differences remain legible. -->
+  <rect x="145" y="395" width="610" height="125" rx="5" fill="#f7f9fc" stroke="#9aa8b5"/>
+  <text x="165" y="417" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#444">Phóng đại vùng đo được (0–0,008 s; không cùng tỷ lệ với biểu đồ trên)</text>
+  <line x1="190" y1="490" x2="720" y2="490" stroke="#555"/>
+  <line x1="190" y1="430" x2="190" y2="490" stroke="#555"/>
+  <polyline points="230,489.90 380,486.66 530,479.40 680,436.95" fill="none" stroke="#2463a6" stroke-width="2.5"/>
+  <g fill="#2463a6">
+    <circle cx="230" cy="489.90" r="4"/><circle cx="380" cy="486.66" r="4"/><circle cx="530" cy="479.40" r="4"/><circle cx="680" cy="436.95" r="4"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="11" fill="#333" text-anchor="middle">
+    <text x="230" y="477">F1 · 0,000013</text><text x="380" y="472">F2 · 0,000445</text>
+    <text x="530" y="465">F3 · 0,001413</text><text x="680" y="426">F4 · 0,007074</text>
+    <text x="230" y="507">1</text><text x="380" y="507">2</text><text x="530" y="507">4</text><text x="680" y="507">5</text>
+  </g>
+  <text x="450" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#555">Số tham số</text>
+</svg>

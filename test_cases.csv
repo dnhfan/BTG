@@ -1,0 +1,20 @@
+﻿Testcase ID,Inputs,Expected Output,Expected Exception,Test Technique,Reasoning
+TC_001,"{""username"": ""aaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",aaaaa:admin:active,,EP,[EP] Valid_Partition
+TC_002,"{""username"": """", ""age"": 50, ""role"": ""admin"", ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_username_Too_Short
+TC_003,"{""username"": ""aaaaaaaaaaaaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",aaaaaaaaaaaaaaa:admin:active,,EP,[EP] Invalid_Partition_username_Too_Long
+TC_004,"{""username"": null, ""age"": 50, ""role"": ""admin"", ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_username_Null
+TC_005,"{""username"": ""aaaaa"", ""age"": -1, ""role"": ""admin"", ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_age_Below_Min
+TC_006,"{""username"": ""aaaaa"", ""age"": 101, ""role"": ""admin"", ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_age_Above_Max
+TC_007,"{""username"": ""aaaaa"", ""age"": null, ""role"": ""admin"", ""active"": true}",,TypeError,EP,[EP] Invalid_Partition_age_Null
+TC_008,"{""username"": ""aaaaa"", ""age"": 50, ""role"": ""__INVALID_ENUM__"", ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_role_Invalid_Enum
+TC_009,"{""username"": ""aaaaa"", ""age"": 50, ""role"": null, ""active"": true}",,ValueError,EP,[EP] Invalid_Partition_role_Null
+TC_010,"{""username"": ""aaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": null}",aaaaa:admin:inactive,,EP,[EP] Invalid_Partition_active_Null
+TC_011,"{""username"": ""a"", ""age"": 50, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] username_MinLen
+TC_012,"{""username"": ""aa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] username_MinLen_Plus_1
+TC_013,"{""username"": ""aaaaaaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",aaaaaaaaa:admin:active,,BVA,[BVA] username_MaxLen_Minus_1
+TC_014,"{""username"": ""aaaaaaaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",aaaaaaaaaa:admin:active,,BVA,[BVA] username_MaxLen
+TC_015,"{""username"": ""aaaaaaaaaaa"", ""age"": 50, ""role"": ""admin"", ""active"": true}",aaaaaaaaaaa:admin:active,,BVA,[BVA] username_MaxLen_Plus_1
+TC_016,"{""username"": ""aaaaa"", ""age"": 0, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] age_Min
+TC_017,"{""username"": ""aaaaa"", ""age"": 1, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] age_Min_Plus_1
+TC_018,"{""username"": ""aaaaa"", ""age"": 99, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] age_Max_Minus_1
+TC_019,"{""username"": ""aaaaa"", ""age"": 100, ""role"": ""admin"", ""active"": true}",,ValueError,BVA,[BVA] age_Max
